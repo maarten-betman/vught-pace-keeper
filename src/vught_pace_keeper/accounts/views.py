@@ -5,6 +5,7 @@ from django.shortcuts import render
 
 from vught_pace_keeper.training.models import TrainingPlan
 from vught_pace_keeper.training.services.analytics import TrainingAnalyticsService
+from vught_pace_keeper.training.services.matching import WorkoutMatchingService
 
 
 def landing_page(request):
@@ -26,10 +27,15 @@ def dashboard(request):
     analytics = TrainingAnalyticsService(request.user)
     weekly_summary = analytics.get_weekly_summary()
 
+    # Get unmatched workout count
+    matching_service = WorkoutMatchingService(request.user)
+    unmatched_count = matching_service.get_unmatched_count()
+
     context = {
         "training_plans": training_plans,
         "template_plans": template_plans,
         "strava_connected": bool(request.user.strava_athlete_id),
         "weekly_summary": weekly_summary,
+        "unmatched_count": unmatched_count,
     }
     return render(request, "dashboard.html", context)

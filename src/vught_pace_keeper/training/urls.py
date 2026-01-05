@@ -56,4 +56,10 @@ urlpatterns = [
     path("goals/<int:pk>/", views.goal_edit, name="goal_edit"),
     path("goals/<int:pk>/delete/", views.goal_delete, name="goal_delete"),
     path("goals/<int:pk>/abandon/", views.goal_abandon, name="goal_abandon"),
+    # Workout Matching
+    path("matching/", views.unmatched_activities, name="matching"),
+    path("matching/<int:pk>/candidates/", views.match_candidates, name="match_candidates"),
+    path("matching/<int:completed_pk>/match/<int:scheduled_pk>/", views.match_workout, name="match_workout"),
+    path("matching/<int:pk>/unmatch/", views.unmatch_workout, name="unmatch_workout"),
+    path("matching/auto/", views.auto_match_all, name="auto_match"),
 ]

@@ -1320,3 +1320,113 @@ def goal_abandon(request, pk):
     goal.save(update_fields=["status", "updated_at"])
     messages.success(request, "Goal marked as abandoned.")
     return redirect("training:goal_list")
+
+
+# ============================================================================
+# Workout Matching Views
+# ============================================================================
+
+
+@login_required
+def unmatched_activities(request):
+    """List unmatched completed workouts."""
+    from .services.matching import WorkoutMatchingService
+
+    service = WorkoutMatchingService(request.user)
+    unmatched = service.get_unmatched_workouts()
+
+    # Get best match candidate for each unmatched workout
+    workouts_with_candidates = []
+    for workout in unmatched:
+        best_match = service.get_best_match(workout)
+        workouts_with_candidates.append({
+            "workout": workout,
+            "best_match": best_match,
+        })
+
+    return render(
+        request,
+        "training/matching/list.html",
+        {
+            "workouts_with_candidates": workouts_with_candidates,
+            "unmatched_count": len(unmatched),
+        },
+    )
+
+
+@login_required
+@require_GET
+def match_candidates(request, pk):
+    """HTMX endpoint to get match candidates for a workout."""
+    from .services.matching import WorkoutMatchingService
+
+    workout = get_object_or_404(CompletedWorkout, pk=pk, user=request.user)
+    service = WorkoutMatchingService(request.user)
+    candidates = service.find_candidates(workout, limit=5)
+
+    return render(
+        request,
+        "training/matching/partials/candidate_list.html",
+        {
+            "workout": workout,
+            "candidates": candidates,
+        },
+    )
+
+
+@login_required
+@require_POST
+def match_workout(request, completed_pk, scheduled_pk):
+    """Match a completed workout to a scheduled workout."""
+    from .services.matching import WorkoutMatchingService
+
+    service = WorkoutMatchingService(request.user)
+    success, message = service.match_workout(completed_pk, scheduled_pk)
+
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+
+    # If HTMX request, return empty response to remove the row
+    if request.headers.get("HX-Request"):
+        return HttpResponse("")
+
+    return redirect("training:matching")
+
+
+@login_required
+@require_POST
+def unmatch_workout(request, pk):
+    """Remove the match between a completed and scheduled workout."""
+    from .services.matching import WorkoutMatchingService
+
+    service = WorkoutMatchingService(request.user)
+    success, message = service.unmatch_workout(pk)
+
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+
+    return redirect("training:workout_log_list")
+
+
+@login_required
+@require_POST
+def auto_match_all(request):
+    """Auto-match all unmatched workouts with high-confidence matches."""
+    from .services.matching import WorkoutMatchingService
+
+    service = WorkoutMatchingService(request.user)
+    result = service.auto_match_all()
+
+    if result.matched > 0:
+        messages.success(request, f"Matched {result.matched} workouts automatically.")
+    if result.skipped > 0:
+        messages.info(request, f"{result.skipped} workouts could not be auto-matched.")
+    if result.errors:
+        for error in result.errors[:3]:  # Show first 3 errors
+            messages.error(request, error)
+
+    return redirect("training:matching")

@@ -1,0 +1,50 @@
+{% if candidates %}
+<div class="border-t border-gray-200 pt-4 mt-4">
+    <h4 class="text-sm font-medium text-gray-700 mb-3">Available Matches</h4>
+    <div class="space-y-2">
+        {% for candidate in candidates %}
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="font-medium text-gray-900">
+                        {{ candidate.scheduled_workout.get_workout_type_display }}
+                    </span>
+                    <span class="text-xs px-1.5 py-0.5 rounded
+                        {% if candidate.score >= 0.8 %}bg-green-100 text-green-800
+                        {% elif candidate.score >= 0.5 %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800
+                        {% endif %}">
+                        {{ candidate.score|floatformat:0|stringformat:"d" }}% match
+                    </span>
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{ candidate.workout_date|date:"D, M j" }}
+                    {% if candidate.scheduled_workout.target_distance_km %}
+                    &middot; {{ candidate.scheduled_workout.target_distance_km }} km planned
+                    {% endif %}
+                </div>
+                <div class="text-xs text-gray-400">{{ candidate.reason }}</div>
+            </div>
+
+            <form method="post"
+                  action="{% url 'training:match_workout' workout.pk candidate.scheduled_workout.pk %}"
+                  hx-post="{% url 'training:match_workout' workout.pk candidate.scheduled_workout.pk %}"
+                  hx-target="#workout-row-{{ workout.pk }}"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-sm px-3 py-1 bg-strava text-white rounded hover:bg-strava-dark">
+                    Select
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="border-t border-gray-200 pt-4 mt-4">
+    <p class="text-sm text-gray-500 text-center py-4">
+        No matching scheduled workouts found within 3 days of this workout.
+    </p>
+</div>
+{% endif %}
