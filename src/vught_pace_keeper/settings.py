@@ -163,10 +163,13 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
+# Email backend (console for development)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Allauth account settings (updated for django-allauth 65+)
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-ACCOUNT_EMAIL_VERIFICATION = "optional"
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Disable for easier local dev
 ACCOUNT_UNIQUE_EMAIL = True
 LOGIN_REDIRECT_URL = "/dashboard/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
