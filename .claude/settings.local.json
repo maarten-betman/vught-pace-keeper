@@ -4,7 +4,8 @@
       "mcp__context7__query-docs",
       "mcp__context7__resolve-library-id",
       "Bash(docker-compose run:*)",
-      "Bash(docker-compose exec web cat:*)"
+      "Bash(docker-compose exec web cat:*)",
+      "Bash(uv run python:*)"
     ]
   }
 }

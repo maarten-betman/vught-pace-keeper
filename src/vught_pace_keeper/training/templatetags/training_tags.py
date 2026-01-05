@@ -66,3 +66,96 @@ def format_duration(duration):
         return f"{minutes}:{seconds:02d}"
     except (AttributeError, TypeError):
         return str(duration)
+
+
+@register.filter
+def format_elevation(elevation_m):
+    """
+    Format elevation in meters.
+
+    Usage: {{ workout.elevation_gain_m|format_elevation }}
+
+    Example: 156.5 -> "157m", 1250 -> "1.25km"
+    """
+    if elevation_m is None:
+        return "-"
+    try:
+        meters = float(elevation_m)
+        if meters >= 1000:
+            return f"{meters / 1000:.2f}km"
+        return f"{int(round(meters))}m"
+    except (ValueError, TypeError):
+        return str(elevation_m)
+
+
+@register.filter
+def format_effort(effort):
+    """
+    Format perceived effort (1-10) with color class.
+
+    Usage: {{ workout.perceived_effort|format_effort }}
+
+    Returns tuple (display_text, css_class)
+    """
+    if effort is None:
+        return "-"
+    try:
+        effort_int = int(effort)
+        return str(effort_int)
+    except (ValueError, TypeError):
+        return str(effort)
+
+
+@register.filter
+def effort_color(effort):
+    """
+    Get Tailwind color class for effort level.
+
+    Usage: <span class="{{ workout.perceived_effort|effort_color }}">
+    """
+    if effort is None:
+        return "text-gray-400"
+    try:
+        effort_int = int(effort)
+        if effort_int <= 3:
+            return "text-green-600"
+        elif effort_int <= 5:
+            return "text-yellow-600"
+        elif effort_int <= 7:
+            return "text-orange-600"
+        else:
+            return "text-red-600"
+    except (ValueError, TypeError):
+        return "text-gray-400"
+
+
+@register.filter
+def format_distance(distance_km):
+    """
+    Format distance in kilometers with 2 decimal places.
+
+    Usage: {{ workout.actual_distance_km|format_distance }}
+
+    Example: 10.5 -> "10.50 km"
+    """
+    if distance_km is None:
+        return "-"
+    try:
+        return f"{float(distance_km):.2f} km"
+    except (ValueError, TypeError):
+        return str(distance_km)
+
+
+@register.filter
+def source_badge_class(source):
+    """
+    Get Tailwind classes for workout source badge.
+
+    Usage: <span class="{{ workout.source|source_badge_class }}">
+    """
+    classes = {
+        "manual": "bg-blue-100 text-blue-700",
+        "gpx_upload": "bg-purple-100 text-purple-700",
+        "strava": "bg-orange-100 text-orange-700",
+    }
+    return classes.get(source, "bg-gray-100 text-gray-700")

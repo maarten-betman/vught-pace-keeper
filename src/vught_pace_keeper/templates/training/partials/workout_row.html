@@ -1,7 +1,16 @@
 {% load training_tags %}
 
-<tr id="workout-{{ workout.pk }}" class="border-b border-gray-100">
-    <td class="py-2">{{ workout.day_of_week|day_name }}</td>
+<tr id="workout-{{ workout.pk }}" class="border-b border-gray-100 {% if workout.completions.exists %}bg-green-50{% endif %}">
+    <td class="py-2">
+        <div class="flex items-center gap-2">
+            {% if workout.completions.exists %}
+            <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            {% endif %}
+            {{ workout.day_of_week|day_name }}
+        </div>
+    </td>
     <td class="py-2">
         <span class="px-2 py-0.5 rounded text-xs
             {% if workout.workout_type == 'rest' %}bg-gray-100 text-gray-600
@@ -20,13 +29,28 @@
     <td class="py-2 text-gray-500">{{ workout.description|default:"-" }}</td>
     {% if can_edit %}
     <td class="py-2 text-right">
-        <button type="button"
-                hx-get="{% url 'training:workout_edit' pk=workout.pk %}"
-                hx-target="#workout-{{ workout.pk }}"
-                hx-swap="outerHTML"
-                class="text-strava hover:text-strava-dark text-sm">
-            Edit
-        </button>
+        <div class="flex justify-end gap-2">
+            {% if workout.workout_type != 'rest' %}
+            {% if workout.completions.exists %}
+            <a href="{% url 'training:workout_log_detail' pk=workout.completions.first.pk %}"
+               class="text-green-600 hover:text-green-800 text-sm">
+                View Log
+            </a>
+            {% else %}
+            <a href="{% url 'training:workout_log_manual_for_scheduled' scheduled_workout_pk=workout.pk %}"
+               class="text-blue-600 hover:text-blue-800 text-sm">
+                Log
+            </a>
+            {% endif %}
+            {% endif %}
+            <button type="button"
+                    hx-get="{% url 'training:scheduled_workout_edit' pk=workout.pk %}"
+                    hx-target="#workout-{{ workout.pk }}"
+                    hx-swap="outerHTML"
+                    class="text-strava hover:text-strava-dark text-sm">
+                Edit
+            </button>
+        </div>
     </td>
     {% endif %}
 </tr>

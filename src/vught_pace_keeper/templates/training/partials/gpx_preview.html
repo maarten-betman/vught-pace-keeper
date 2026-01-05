@@ -1,0 +1,60 @@
+{% load training_tags %}
+
+{% if error %}
+<div class="p-4 bg-red-50 border border-red-200 rounded text-red-700">
+    <p class="font-medium">Error parsing GPX file</p>
+    <p class="text-sm">{{ error }}</p>
+</div>
+{% elif gpx_data %}
+<div class="p-4 bg-green-50 border border-green-200 rounded">
+    <div class="flex items-center mb-3">
+        <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span class="font-medium text-green-800">GPX file parsed successfully</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 text-center mb-4">
+        <div>
+            <div class="text-xl font-bold text-strava">{{ gpx_data.distance_km }}</div>
+            <div class="text-xs text-gray-600">km</div>
+        </div>
+        <div>
+            <div class="text-xl font-bold">{{ gpx_data.duration|format_duration }}</div>
+            <div class="text-xs text-gray-600">duration</div>
+        </div>
+        <div>
+            <div class="text-xl font-bold">{{ gpx_data.pace_min_per_km|format_pace }}</div>
+            <div class="text-xs text-gray-600">pace</div>
+        </div>
+    </div>
+
+    {% if gpx_data.elevation_gain_m %}
+    <div class="text-center text-sm text-gray-600 mb-4">
+        Elevation: {{ gpx_data.elevation_gain_m|format_elevation }} gain
+    </div>
+    {% endif %}
+
+    {% if route_geojson %}
+    <div id="preview-map-htmx" class="h-40 rounded-lg"></div>
+    <script>
+        (function() {
+            // Initialize map if Leaflet is loaded
+            if (typeof L !== 'undefined') {
+                const map = L.map('preview-map-htmx');
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+
+                const routeData = {{ route_geojson|safe }};
+                const routeLayer = L.geoJSON(routeData, {
+                    style: { color: '#FC4C02', weight: 3, opacity: 0.8 }
+                }).addTo(map);
+
+                map.fitBounds(routeLayer.getBounds(), { padding: [10, 10] });
+            }
+        })();
+    </script>
+    {% endif %}
+</div>
+{% endif %}

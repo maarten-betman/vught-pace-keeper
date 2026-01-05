@@ -12,6 +12,7 @@ dependencies = [
     "django-fernet-encrypted-fields>=0.2",
     "django-htmx>=1.17",
     "requests>=2.31",
+    "gpxpy>=1.6.2",
 ]
 
 [project.optional-dependencies]
