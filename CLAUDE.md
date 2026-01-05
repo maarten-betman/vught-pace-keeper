@@ -9,7 +9,8 @@ Marathon training plan management system with Strava integration, built with Dja
 - **Authentication**: django-allauth with Strava OAuth
 - **Frontend**: Django templates + HTMX
 - **Package Manager**: uv
-- **Containerization**: Docker Compose
+- **Task Runner**: just (justfile)
+- **Dev Environment**: WSL2 + Docker (DB only)
 
 ## Project Structure
 ```
@@ -54,36 +55,66 @@ vught-pace-keeper/
 4. Tokens stored encrypted in StravaToken model
 5. Redirect to `/dashboard/`
 
+## Development Environment
+
+**WSL2 Setup**: Django runs directly in WSL2 via uv, while PostgreSQL/PostGIS runs in Docker.
+
+```bash
+# One-time WSL setup (install GDAL/GEOS for GeoDjango)
+just setup-wsl
+
+# Install Python dependencies
+just install
+```
+
+**Important**: DATABASE_URL in `.env` must use `localhost` (not `db`) since Django runs in WSL:
+```
+DATABASE_URL=postgis://vught_user:vught_pass@localhost:5432/vught_pace_keeper
+```
+
 ## Commands
 
-### Development
+All commands use `just` (see `justfile` for full list):
+
 ```bash
-# Start all services
-docker-compose up -d
+# Start database container
+just db
 
-# Run Django commands
-docker-compose run --rm web uv run python manage.py <command>
+# Run development server
+just run
 
-# Make migrations
-docker-compose run --rm web uv run python manage.py makemigrations
+# Fresh start (db + migrate + fixtures + run)
+just fresh
 
-# Apply migrations
-docker-compose run --rm web uv run python manage.py migrate
+# Quick start (db + run, assumes migrations applied)
+just start
+```
 
-# Create superuser
-docker-compose run --rm web uv run python manage.py createsuperuser
+### Django Commands
+```bash
+just makemigrations          # Make migrations
+just migrate                 # Apply migrations
+just superuser               # Create superuser
+just fixtures                # Load sample data
+just shell                   # Django shell
+just test                    # Run tests
+just test-cov                # Tests with coverage
+```
 
-# Load sample data
-docker-compose run --rm web uv run python manage.py loaddata sample_data
-
-# View logs
-docker-compose logs -f web
+### Utilities
+```bash
+just lint                    # Run ruff linter
+just lint-fix                # Auto-fix lint issues
+just fmt                     # Format code with ruff
+just secret-key              # Generate Django secret key
+just fernet-key              # Generate Fernet encryption key
 ```
 
 ### Database
 ```bash
-# Access PostgreSQL
-docker-compose exec db psql -U vught_user -d vught_pace_keeper
+just db-shell                # PostgreSQL shell
+just db-stop                 # Stop database
+just db-reset                # Reset database (destructive!)
 ```
 
 ## Environment Variables
@@ -98,11 +129,8 @@ Required in `.env`:
 
 ### Generate Keys
 ```bash
-# Django SECRET_KEY
-docker-compose run --rm web uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-
-# FERNET_KEY (for token encryption)
-docker-compose run --rm web uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+just secret-key    # Django SECRET_KEY
+just fernet-key    # FERNET_KEY for token encryption
 ```
 
 ## URLs
@@ -112,29 +140,25 @@ docker-compose run --rm web uv run python -c "from cryptography.fernet import Fe
 - `/accounts/login/` - Email login
 - `/accounts/strava/login/` - Strava OAuth login
 - `/accounts/logout/` - Logout
+- `/training/plans/` - Training plan list
+- `/training/workouts/` - Workout log
+- `/training/zones/` - Pace zones management
+- `/training/zones/calculator/` - Pace zone calculator (VDOT-based)
 
-## Current State (Dec 2025)
+## Current State (Jan 2026)
 
-### Completed
-- [x] Project scaffolding with Docker + PostGIS
-- [x] Custom User model with Strava fields
-- [x] Training models (plans, weeks, workouts, pace zones)
-- [x] django-allauth with Strava provider
-- [x] Strava OAuth login flow working
-- [x] Encrypted token storage (Fernet with SALT_KEY)
-- [x] Token refresh utility
-- [x] HTMX-ready templates (base, landing, dashboard)
-- [x] Sample fixture data for training plans
-- [x] Django admin configuration
+### Completed Phases
+- [x] **Phase 1**: Project scaffolding with Docker + PostGIS
+- [x] **Phase 2**: Strava OAuth with django-allauth, encrypted token storage
+- [x] **Phase 3**: Training plan template engine (custom plans, multi-step wizard)
+- [x] **Phase 4**: Manual workout logging, GPX upload with route display
+- [x] **Phase 5**: Pace zone calculator (VDOT-based, race result or threshold input)
 
-### Next Steps
-- [ ] Strava activity sync (fetch activities from API)
-- [ ] Match completed workouts to scheduled workouts
-- [ ] Pace zone analysis for completed workouts
-- [ ] Training plan progress visualization
-- [ ] HTMX partial updates for dashboard
-- [ ] Webhook receiver for real-time Strava updates
-- [ ] Age-graded performance calculations
+### Next Phase: 6 - Strava Activity Sync
+- [ ] StravaClient service class with auto token refresh
+- [ ] Fetch and sync activities from Strava API
+- [ ] Match synced activities to scheduled workouts
+- [ ] Activity import review UI
 
 ## API Integration Notes
 
@@ -159,11 +183,8 @@ Uses `accounts/strava_utils.py:refresh_strava_token()`.
 
 ## Testing
 ```bash
-# Run tests
-docker-compose run --rm web uv run pytest
-
-# Run with coverage
-docker-compose run --rm web uv run pytest --cov=vught_pace_keeper
+just test          # Run tests
+just test-cov      # Run with coverage
 ```
 
 ## Fixtures

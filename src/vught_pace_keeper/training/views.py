@@ -17,12 +17,16 @@ from .forms import (
     ManualWorkoutForm,
     PlanWizardStep1Form,
     PlanWizardStep2Form,
+    RaceResultForm,
+    ThresholdPaceForm,
     WorkoutEditForm,
+    ZoneOverrideForm,
 )
 from .generators import PlanGeneratorRegistry
 from .generators.base import PlanConfig
 from .gpx_utils import GPXParseError, parse_gpx_file
-from .models import CompletedWorkout, ScheduledWorkout, TrainingPlan, TrainingWeek
+from .models import CompletedWorkout, PaceZone, ScheduledWorkout, TrainingPlan, TrainingWeek
+from .pace_calculator import PaceCalculationError, PaceZoneCalculator
 
 
 WIZARD_SESSION_KEY = "plan_wizard_data"
@@ -688,3 +692,167 @@ def workout_log_delete(request, pk):
     if request.htmx:
         return HttpResponse(status=200)
     return redirect("training:workout_log_list")
+
+
+# Pace Zone Views
+
+ZONES_SESSION_KEY = "calculated_zones"
+
+
+@login_required
+def pace_zone_list(request):
+    """Display user's current pace zones."""
+    zones = PaceZone.objects.filter(user=request.user).order_by("min_pace_min_per_km")
+
+    return render(
+        request,
+        "training/pace_zones/zone_list.html",
+        {"zones": zones},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def pace_zone_calculator(request):
+    """Calculate pace zones from race result or threshold pace."""
+    race_form = RaceResultForm()
+    threshold_form = ThresholdPaceForm()
+    result = None
+    active_tab = request.POST.get("tab", "race")
+
+    if request.method == "POST":
+        calculator = PaceZoneCalculator()
+
+        if active_tab == "race":
+            race_form = RaceResultForm(request.POST)
+            if race_form.is_valid():
+                try:
+                    result = calculator.from_race_result(
+                        distance=race_form.cleaned_data["distance_value"],
+                        time=race_form.cleaned_data["race_time"],
+                    )
+                    # Store in session for save action
+                    _store_zones_in_session(request, result)
+                except PaceCalculationError as e:
+                    messages.error(request, str(e))
+
+        elif active_tab == "threshold":
+            threshold_form = ThresholdPaceForm(request.POST)
+            if threshold_form.is_valid():
+                try:
+                    result = calculator.from_threshold_pace(
+                        threshold_pace=threshold_form.cleaned_data["threshold_pace"],
+                    )
+                    _store_zones_in_session(request, result)
+                except PaceCalculationError as e:
+                    messages.error(request, str(e))
+
+        # Return partial for HTMX
+        if request.htmx and result:
+            # Get existing zones for comparison
+            existing_zones = PaceZone.objects.filter(user=request.user)
+            return render(
+                request,
+                "training/pace_zones/zone_results.html",
+                {
+                    "result": result,
+                    "existing_zones": existing_zones,
+                },
+            )
+
+    return render(
+        request,
+        "training/pace_zones/calculator.html",
+        {
+            "race_form": race_form,
+            "threshold_form": threshold_form,
+            "active_tab": active_tab,
+            "result": result,
+        },
+    )
+
+
+def _store_zones_in_session(request, result):
+    """Store calculated zones in session for later save."""
+    session_data = {
+        "vdot": result.vdot,
+        "source_description": result.source_description,
+        "zones": [
+            {
+                "name": z.name,
+                "min_pace": str(z.min_pace_min_per_km),
+                "max_pace": str(z.max_pace_min_per_km),
+                "description": z.description,
+                "color_hex": z.color_hex,
+            }
+            for z in result.zones
+        ],
+    }
+    request.session[ZONES_SESSION_KEY] = session_data
+
+
+@login_required
+@require_POST
+def pace_zone_save(request):
+    """Save calculated zones to database."""
+    session_data = request.session.get(ZONES_SESSION_KEY)
+
+    if not session_data:
+        messages.error(request, "No zones to save. Please calculate zones first.")
+        return redirect("training:pace_zone_calculator")
+
+    from decimal import Decimal
+
+    with transaction.atomic():
+        # Delete existing zones
+        PaceZone.objects.filter(user=request.user).delete()
+
+        # Create new zones
+        for zone_data in session_data["zones"]:
+            PaceZone.objects.create(
+                user=request.user,
+                name=zone_data["name"],
+                min_pace_min_per_km=Decimal(zone_data["min_pace"]),
+                max_pace_min_per_km=Decimal(zone_data["max_pace"]),
+                description=zone_data["description"],
+                color_hex=zone_data["color_hex"],
+            )
+
+    # Clear session
+    if ZONES_SESSION_KEY in request.session:
+        del request.session[ZONES_SESSION_KEY]
+
+    messages.success(
+        request,
+        f"Pace zones saved! (VDOT: {session_data['vdot']})",
+    )
+    return redirect("training:pace_zone_list")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def pace_zone_override(request, pk):
+    """Override a single pace zone's values."""
+    zone = get_object_or_404(PaceZone, pk=pk, user=request.user)
+
+    if request.method == "POST":
+        form = ZoneOverrideForm(request.POST, instance=zone)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{zone.get_name_display()} zone updated.")
+
+            if request.htmx:
+                return render(
+                    request,
+                    "training/pace_zones/zone_card.html",
+                    {"zone": zone},
+                )
+            return redirect("training:pace_zone_list")
+    else:
+        form = ZoneOverrideForm(instance=zone)
+
+    return render(
+        request,
+        "training/pace_zones/zone_edit.html",
+        {"form": form, "zone": zone},
+    )

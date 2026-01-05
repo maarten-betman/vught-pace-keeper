@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load training_tags %}
+
+{% block title %}Edit {{ zone.get_name_display }} Zone - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <a href="{% url 'training:pace_zone_list' %}" class="text-sm text-gray-500 hover:text-strava mb-2 inline-block">
+        &larr; Back to My Zones
+    </a>
+
+    <h1 class="text-2xl font-bold mb-6">Edit {{ zone.get_name_display }} Zone</h1>
+
+    <div class="card">
+        <div class="mb-4">
+            <span class="px-3 py-1 rounded-full text-sm font-medium {{ zone.name|zone_color }}">
+                {{ zone.get_name_display }}
+            </span>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Slow End (min pace)</label>
+                <div class="flex items-center gap-2">
+                    {{ form.min_pace_minutes }}
+                    <span class="text-gray-500">:</span>
+                    {{ form.min_pace_seconds }}
+                    <span class="text-gray-500">/km</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">The slowest pace for this zone</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Fast End (max pace)</label>
+                <div class="flex items-center gap-2">
+                    {{ form.max_pace_minutes }}
+                    <span class="text-gray-500">:</span>
+                    {{ form.max_pace_seconds }}
+                    <span class="text-gray-500">/km</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">The fastest pace for this zone</p>
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="flex gap-4">
+                <a href="{% url 'training:pace_zone_list' %}" class="btn btn-secondary flex-1 justify-center">
+                    Cancel
+                </a>
+                <button type="submit" class="btn btn-strava flex-1 justify-center">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

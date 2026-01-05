@@ -7,7 +7,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .generators import PlanGeneratorRegistry
-from .models import CompletedWorkout, ScheduledWorkout, TrainingPlan
+from .models import CompletedWorkout, PaceZone, ScheduledWorkout, TrainingPlan
 
 
 class PlanWizardStep1Form(forms.Form):
@@ -529,6 +529,237 @@ class GPXConfirmForm(forms.ModelForm):
 
         if self.scheduled_workout:
             instance.scheduled_workout = self.scheduled_workout
+
+        if commit:
+            instance.save()
+        return instance
+
+
+# Pace Zone Calculator Forms
+
+
+RACE_DISTANCE_CHOICES = [
+    ("5k", "5K"),
+    ("10k", "10K"),
+    ("half_marathon", "Half Marathon"),
+    ("marathon", "Marathon"),
+    ("custom", "Custom Distance"),
+]
+
+
+class RaceResultForm(forms.Form):
+    """Form for calculating pace zones from a race result."""
+
+    distance = forms.ChoiceField(
+        choices=RACE_DISTANCE_CHOICES,
+        widget=forms.RadioSelect(attrs={"class": "hidden peer"}),
+        label="Race Distance",
+    )
+    custom_distance_km = forms.DecimalField(
+        required=False,
+        min_value=Decimal("1"),
+        max_value=Decimal("100"),
+        decimal_places=2,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input",
+                "placeholder": "Distance in km",
+                "step": "0.01",
+            }
+        ),
+        label="Custom Distance (km)",
+    )
+    time_hours = forms.IntegerField(
+        min_value=0,
+        max_value=10,
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "H",
+            }
+        ),
+    )
+    time_minutes = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=True,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "MM",
+            }
+        ),
+    )
+    time_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        distance = cleaned_data.get("distance")
+        custom_distance = cleaned_data.get("custom_distance_km")
+
+        # Validate custom distance if selected
+        if distance == "custom":
+            if not custom_distance:
+                raise ValidationError("Please enter a custom distance.")
+            cleaned_data["distance_value"] = float(custom_distance)
+        else:
+            cleaned_data["distance_value"] = distance
+
+        # Combine time fields
+        hours = cleaned_data.get("time_hours") or 0
+        minutes = cleaned_data.get("time_minutes") or 0
+        seconds = cleaned_data.get("time_seconds") or 0
+
+        if not (hours or minutes or seconds):
+            raise ValidationError("Please enter a race time.")
+
+        race_time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        cleaned_data["race_time"] = race_time
+
+        # Basic sanity check
+        if race_time.total_seconds() < 60:
+            raise ValidationError("Race time must be at least 1 minute.")
+
+        return cleaned_data
+
+
+class ThresholdPaceForm(forms.Form):
+    """Form for calculating pace zones from threshold pace."""
+
+    pace_minutes = forms.IntegerField(
+        min_value=2,
+        max_value=15,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "M",
+            }
+        ),
+        label="Minutes",
+    )
+    pace_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+        label="Seconds",
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        minutes = cleaned_data.get("pace_minutes")
+        seconds = cleaned_data.get("pace_seconds") or 0
+
+        if minutes is None:
+            raise ValidationError("Please enter pace minutes.")
+
+        # Convert to decimal min/km (e.g., 5:30 -> 5.50)
+        pace_decimal = Decimal(str(minutes)) + Decimal(str(seconds)) / Decimal("60")
+        cleaned_data["threshold_pace"] = pace_decimal.quantize(Decimal("0.01"))
+
+        return cleaned_data
+
+
+class ZoneOverrideForm(forms.ModelForm):
+    """Form for manually overriding a pace zone's pace range."""
+
+    min_pace_minutes = forms.IntegerField(
+        min_value=2,
+        max_value=15,
+        widget=forms.NumberInput(
+            attrs={"class": "form-input w-16 text-center"}
+        ),
+    )
+    min_pace_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={"class": "form-input w-16 text-center"}
+        ),
+    )
+    max_pace_minutes = forms.IntegerField(
+        min_value=2,
+        max_value=15,
+        widget=forms.NumberInput(
+            attrs={"class": "form-input w-16 text-center"}
+        ),
+    )
+    max_pace_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={"class": "form-input w-16 text-center"}
+        ),
+    )
+
+    class Meta:
+        model = PaceZone
+        fields: list[str] = []  # We use custom fields instead
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Pre-fill from instance
+        if self.instance and self.instance.pk:
+            min_pace = float(self.instance.min_pace_min_per_km)
+            max_pace = float(self.instance.max_pace_min_per_km)
+
+            self.fields["min_pace_minutes"].initial = int(min_pace)
+            self.fields["min_pace_seconds"].initial = int((min_pace % 1) * 60)
+            self.fields["max_pace_minutes"].initial = int(max_pace)
+            self.fields["max_pace_seconds"].initial = int((max_pace % 1) * 60)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Convert to decimal
+        min_minutes = cleaned_data.get("min_pace_minutes")
+        min_seconds = cleaned_data.get("min_pace_seconds") or 0
+        max_minutes = cleaned_data.get("max_pace_minutes")
+        max_seconds = cleaned_data.get("max_pace_seconds") or 0
+
+        if min_minutes is None or max_minutes is None:
+            raise ValidationError("Please enter both min and max pace.")
+
+        min_pace = Decimal(str(min_minutes)) + Decimal(str(min_seconds)) / Decimal("60")
+        max_pace = Decimal(str(max_minutes)) + Decimal(str(max_seconds)) / Decimal("60")
+
+        # Note: slower pace = higher number, so min_pace should be > max_pace
+        if min_pace <= max_pace:
+            raise ValidationError(
+                "Min pace (slower) must be greater than max pace (faster)."
+            )
+
+        cleaned_data["min_pace_min_per_km"] = min_pace.quantize(Decimal("0.01"))
+        cleaned_data["max_pace_min_per_km"] = max_pace.quantize(Decimal("0.01"))
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.min_pace_min_per_km = self.cleaned_data["min_pace_min_per_km"]
+        instance.max_pace_min_per_km = self.cleaned_data["max_pace_min_per_km"]
 
         if commit:
             instance.save()

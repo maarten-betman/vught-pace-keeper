@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load training_tags %}
+
+{% block title %}Calculate Pace Zones - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{% url 'training:pace_zone_list' %}" class="text-sm text-gray-500 hover:text-strava mb-2 inline-block">
+        &larr; Back to My Zones
+    </a>
+
+    <h1 class="text-2xl font-bold mb-2">Calculate Pace Zones</h1>
+    <p class="text-gray-500 mb-6">
+        Enter a recent race result or your threshold pace to calculate personalized training zones.
+    </p>
+
+    <!-- Tab Navigation -->
+    <div class="flex border-b border-gray-200 mb-6">
+        <button type="button"
+                onclick="switchTab('race')"
+                id="tab-race"
+                class="px-4 py-2 -mb-px {% if active_tab == 'race' %}border-b-2 border-strava text-strava font-medium{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            From Race Result
+        </button>
+        <button type="button"
+                onclick="switchTab('threshold')"
+                id="tab-threshold"
+                class="px-4 py-2 -mb-px {% if active_tab == 'threshold' %}border-b-2 border-strava text-strava font-medium{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            From Threshold Pace
+        </button>
+    </div>
+
+    <!-- Race Result Tab -->
+    <div id="content-race" class="{% if active_tab != 'race' %}hidden{% endif %}">
+        <form method="post"
+              hx-post="{% url 'training:pace_zone_calculator' %}"
+              hx-target="#zone-results"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="race">
+
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">Race Distance</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {% for value, label in race_form.distance.field.choices %}
+                        {% if value != 'custom' %}
+                        <label class="radio-card {% if race_form.distance.value == value %}selected{% endif %}">
+                            <input type="radio" name="distance" value="{{ value }}"
+                                   {% if race_form.distance.value == value %}checked{% endif %}
+                                   class="hidden peer"
+                                   onchange="this.closest('form').querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected')); this.closest('.radio-card').classList.add('selected'); document.getElementById('custom-distance').classList.add('hidden');">
+                            <span class="text-sm font-medium">{{ label }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <label class="radio-card mt-3 {% if race_form.distance.value == 'custom' %}selected{% endif %}">
+                        <input type="radio" name="distance" value="custom"
+                               {% if race_form.distance.value == 'custom' %}checked{% endif %}
+                               class="hidden peer"
+                               onchange="this.closest('form').querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected')); this.closest('.radio-card').classList.add('selected'); document.getElementById('custom-distance').classList.remove('hidden');">
+                        <span class="text-sm font-medium">Custom Distance</span>
+                    </label>
+
+                    <div id="custom-distance" class="mt-3 {% if race_form.distance.value != 'custom' %}hidden{% endif %}">
+                        {{ race_form.custom_distance_km }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Race Time</label>
+                    <div class="flex items-center gap-2">
+                        {{ race_form.time_hours }}
+                        <span class="text-gray-500">h</span>
+                        {{ race_form.time_minutes }}
+                        <span class="text-gray-500">m</span>
+                        {{ race_form.time_seconds }}
+                        <span class="text-gray-500">s</span>
+                    </div>
+                    {% if race_form.time_minutes.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ race_form.time_minutes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                {% if race_form.non_field_errors %}
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    {% for error in race_form.non_field_errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-strava w-full justify-center">
+                    Calculate Zones
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Threshold Pace Tab -->
+    <div id="content-threshold" class="{% if active_tab != 'threshold' %}hidden{% endif %}">
+        <form method="post"
+              hx-post="{% url 'training:pace_zone_calculator' %}"
+              hx-target="#zone-results"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="threshold">
+
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">Threshold Pace (per km)</label>
+                    <p class="text-sm text-gray-500 mb-3">
+                        Your threshold pace is the fastest pace you can sustain for about 1 hour.
+                    </p>
+                    <div class="flex items-center gap-2">
+                        {{ threshold_form.pace_minutes }}
+                        <span class="text-gray-500">:</span>
+                        {{ threshold_form.pace_seconds }}
+                        <span class="text-gray-500">/km</span>
+                    </div>
+                    {% if threshold_form.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ threshold_form.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                {% if threshold_form.non_field_errors %}
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    {% for error in threshold_form.non_field_errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-strava w-full justify-center">
+                    Calculate Zones
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Area -->
+    <div id="zone-results" class="mt-6">
+        {% if result %}
+        {% include "training/pace_zones/zone_results.html" with result=result %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+        btn.classList.remove('border-b-2', 'border-strava', 'text-strava', 'font-medium');
+        btn.classList.add('text-gray-500');
+    });
+    document.getElementById('tab-' + tab).classList.remove('text-gray-500');
+    document.getElementById('tab-' + tab).classList.add('border-b-2', 'border-strava', 'text-strava', 'font-medium');
+
+    // Update content
+    document.querySelectorAll('[id^="content-"]').forEach(content => {
+        content.classList.add('hidden');
+    });
+    document.getElementById('content-' + tab).classList.remove('hidden');
+
+    // Clear results when switching tabs
+    document.getElementById('zone-results').innerHTML = '';
+}
+</script>
+{% endblock %}

@@ -25,4 +25,9 @@ urlpatterns = [
     path("log/gpx/", views.workout_log_gpx, name="workout_log_gpx"),
     path("log/gpx/<int:scheduled_workout_pk>/", views.workout_log_gpx, name="workout_log_gpx_for_scheduled"),
     path("log/gpx-preview/", views.gpx_preview, name="gpx_preview"),
+    # Pace zones
+    path("zones/", views.pace_zone_list, name="pace_zone_list"),
+    path("zones/calculator/", views.pace_zone_calculator, name="pace_zone_calculator"),
+    path("zones/save/", views.pace_zone_save, name="pace_zone_save"),
+    path("zones/<int:pk>/edit/", views.pace_zone_override, name="pace_zone_override"),
 ]

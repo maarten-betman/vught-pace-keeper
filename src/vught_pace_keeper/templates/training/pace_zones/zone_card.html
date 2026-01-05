@@ -1,0 +1,24 @@
+{% load training_tags %}
+
+<div id="zone-{{ zone.pk }}" class="card">
+    <div class="flex justify-between items-start mb-3">
+        <span class="px-3 py-1 rounded-full text-sm font-medium {{ zone.name|zone_color }}">
+            {{ zone.get_name_display }}
+        </span>
+        <a href="{% url 'training:pace_zone_override' pk=zone.pk %}"
+           class="text-sm text-gray-500 hover:text-strava">
+            Edit
+        </a>
+    </div>
+
+    <div class="text-center mb-3">
+        <div class="text-2xl font-bold">
+            {{ zone.max_pace_min_per_km|format_pace }} - {{ zone.min_pace_min_per_km|format_pace }}
+        </div>
+        <div class="text-xs text-gray-500">pace range</div>
+    </div>
+
+    <p class="text-sm text-gray-600 text-center">
+        {{ zone.description }}
+    </p>
+</div>

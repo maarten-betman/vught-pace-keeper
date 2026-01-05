@@ -1,0 +1,46 @@
+{% load training_tags %}
+
+<div class="card bg-green-50 border-green-200">
+    <div class="flex items-center mb-4">
+        <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span class="font-medium text-green-800">Zones calculated successfully!</span>
+    </div>
+
+    <div class="text-center mb-6">
+        <div class="text-sm text-gray-600">Based on: {{ result.source_description }}</div>
+        <div class="text-3xl font-bold text-strava">VDOT {{ result.vdot }}</div>
+    </div>
+
+    <div class="space-y-3 mb-6">
+        {% for zone in result.zones %}
+        <div class="flex items-center justify-between p-3 bg-white rounded border">
+            <div class="flex items-center gap-3">
+                <span class="px-2 py-1 rounded text-xs font-medium {{ zone.name|zone_color }}">
+                    {{ zone.name|title }}
+                </span>
+                <span class="text-sm text-gray-500">{{ zone.description }}</span>
+            </div>
+            <div class="font-mono font-medium">
+                {{ zone.max_pace_min_per_km|format_pace }} - {{ zone.min_pace_min_per_km|format_pace }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if existing_zones %}
+    <div class="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <p class="text-sm text-yellow-800">
+            <strong>Note:</strong> Saving these zones will replace your current zones.
+        </p>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'training:pace_zone_save' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-strava w-full justify-center">
+            Save These Zones
+        </button>
+    </form>
+</div>

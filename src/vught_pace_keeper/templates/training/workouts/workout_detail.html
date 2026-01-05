@@ -65,6 +65,17 @@
         </div>
     </div>
 
+    <!-- Pace Zone -->
+    {% pace_in_zone workout.average_pace_min_per_km request.user as zone_name %}
+    {% if zone_name %}
+    <div class="card mb-6 text-center">
+        <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">Training Zone</div>
+        <span class="px-4 py-2 rounded-full text-lg font-medium {{ zone_name|zone_color }}">
+            {{ zone_name|title }}
+        </span>
+    </div>
+    {% endif %}
+
     <!-- Additional Stats -->
     <div class="card mb-6">
         <h2 class="font-semibold mb-4">Details</h2>

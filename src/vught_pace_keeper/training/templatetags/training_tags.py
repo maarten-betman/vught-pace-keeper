@@ -159,3 +159,68 @@ def source_badge_class(source):
         "strava": "bg-orange-100 text-orange-700",
     }
     return classes.get(source, "bg-gray-100 text-gray-700")
+
+
+# Pace Zone Template Tags
+
+ZONE_COLORS = {
+    "recovery": "bg-gray-100 text-gray-700",
+    "easy": "bg-green-100 text-green-700",
+    "tempo": "bg-yellow-100 text-yellow-700",
+    "threshold": "bg-orange-100 text-orange-700",
+    "interval": "bg-red-100 text-red-700",
+    "repetition": "bg-purple-100 text-purple-700",
+}
+
+
+@register.filter
+def zone_color(zone_name):
+    """
+    Get Tailwind classes for a pace zone badge.
+
+    Usage: <span class="{{ zone.name|zone_color }}">{{ zone.name }}</span>
+    """
+    return ZONE_COLORS.get(zone_name, "bg-gray-100 text-gray-700")
+
+
+@register.simple_tag
+def pace_in_zone(pace, user):
+    """
+    Determine which pace zone a given pace falls into.
+
+    Usage: {% pace_in_zone workout.average_pace_min_per_km request.user as zone_name %}
+
+    Returns zone name or None if no zones defined or pace outside all zones.
+    """
+    if pace is None or user is None:
+        return None
+
+    from vught_pace_keeper.training.models import PaceZone
+
+    try:
+        pace_float = float(pace)
+    except (ValueError, TypeError):
+        return None
+
+    zones = PaceZone.objects.filter(user=user).order_by("min_pace_min_per_km")
+
+    for zone in zones:
+        min_pace = float(zone.min_pace_min_per_km)
+        max_pace = float(zone.max_pace_min_per_km)
+
+        # Note: slower pace = higher number, faster = lower
+        if max_pace <= pace_float <= min_pace:
+            return zone.name
+
+    # If pace is slower than all zones
+    if zones.exists():
+        slowest = zones.first()
+        if pace_float > float(slowest.min_pace_min_per_km):
+            return "recovery"
+
+        # If pace is faster than all zones
+        fastest = zones.last()
+        if pace_float < float(fastest.max_pace_min_per_km):
+            return "repetition"
+
+    return None

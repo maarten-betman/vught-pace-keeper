@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load training_tags %}
+
+{% block title %}My Pace Zones - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">My Pace Zones</h1>
+        <a href="{% url 'training:pace_zone_calculator' %}" class="btn btn-strava">
+            {% if zones %}Recalculate{% else %}Calculate Zones{% endif %}
+        </a>
+    </div>
+
+    {% if zones %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for zone in zones %}
+        {% include "training/pace_zones/zone_card.html" with zone=zone %}
+        {% endfor %}
+    </div>
+
+    <div class="mt-8 card bg-gray-50">
+        <h3 class="font-semibold mb-2">How to use your zones</h3>
+        <ul class="text-sm text-gray-600 space-y-1">
+            <li><strong>Recovery:</strong> Post-workout or between hard sessions</li>
+            <li><strong>Easy:</strong> Most of your training should be here</li>
+            <li><strong>Tempo:</strong> Marathon pace work and steady runs</li>
+            <li><strong>Threshold:</strong> Tempo runs, typically 20-40 minutes</li>
+            <li><strong>Interval:</strong> Track workouts, 3-5 minute repeats</li>
+            <li><strong>Repetition:</strong> Short, fast bursts for speed development</li>
+        </ul>
+    </div>
+
+    {% else %}
+    <div class="card text-center py-12">
+        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No pace zones yet</h3>
+        <p class="text-gray-500 mb-6">
+            Calculate your personalized training zones based on a recent race or threshold test.
+        </p>
+        <a href="{% url 'training:pace_zone_calculator' %}" class="btn btn-strava">
+            Calculate My Zones
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
