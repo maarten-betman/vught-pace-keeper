@@ -317,3 +317,33 @@ class CompletedWorkout(TimestampedModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.date} - {self.actual_distance_km}km"
+
+
+class ActivityStream(models.Model):
+    """Time-series data for a completed workout (pace, HR, elevation over distance/time)."""
+
+    workout = models.OneToOneField(
+        CompletedWorkout,
+        on_delete=models.CASCADE,
+        related_name="stream",
+    )
+    # Store as JSON arrays - efficient for time-series data
+    time_data = models.JSONField(default=list, help_text="Seconds from start")
+    distance_data = models.JSONField(default=list, help_text="Meters")
+    heartrate_data = models.JSONField(default=list, help_text="BPM (may contain nulls)")
+    velocity_data = models.JSONField(default=list, help_text="Meters per second")
+    altitude_data = models.JSONField(default=list, help_text="Meters elevation")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Activity Stream"
+        verbose_name_plural = "Activity Streams"
+
+    def __str__(self):
+        return f"Stream for {self.workout}"
+
+    @property
+    def point_count(self):
+        """Number of data points in the stream."""
+        return len(self.time_data)

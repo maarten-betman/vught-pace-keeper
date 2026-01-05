@@ -7,6 +7,7 @@
 {% if route_geojson %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
     body { max-width: none !important; padding: 0 !important; }
     nav { max-width: 960px; margin: 0 auto; padding: 0 1rem; }
@@ -119,6 +120,25 @@
             </div>
             {% endif %}
 
+            <!-- Pace & HR Charts -->
+            <div id="charts-section" class="border-t border-gray-100 pt-4 mb-4 hidden">
+                <!-- Pace Chart -->
+                <div class="mb-4">
+                    <div class="text-xs text-gray-500 uppercase mb-2">Pace</div>
+                    <div class="h-32">
+                        <canvas id="pace-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Heart Rate Chart -->
+                <div id="hr-chart-container" class="hidden">
+                    <div class="text-xs text-gray-500 uppercase mb-2">Heart Rate</div>
+                    <div class="h-32">
+                        <canvas id="hr-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes -->
             {% if workout.notes %}
             <div class="border-t border-gray-100 pt-4 mb-4">
@@ -206,6 +226,252 @@
                 fillOpacity: 1
             }).addTo(map).bindTooltip('Finish', { permanent: false });
         }
+
+        // Hover marker for chart interaction
+        let hoverMarker = null;
+        const routeCoords = routeData.geometry.coordinates;
+
+        // Fetch and render activity stream charts
+        fetch('{% url "training:workout_streams" pk=workout.pk %}')
+            .then(response => {
+                if (!response.ok) return null;
+                return response.json();
+            })
+            .then(data => {
+                if (!data || data.error) return;
+
+                // Show charts section
+                document.getElementById('charts-section').classList.remove('hidden');
+
+                // Sample data if too many points (for performance)
+                const maxPoints = 200;
+                let indices = [];
+                if (data.distance_km.length > maxPoints) {
+                    const step = Math.floor(data.distance_km.length / maxPoints);
+                    for (let i = 0; i < data.distance_km.length; i += step) {
+                        indices.push(i);
+                    }
+                } else {
+                    indices = [...Array(data.distance_km.length).keys()];
+                }
+
+                const labels = indices.map(i => data.distance_km[i]);
+                const paceData = indices.map(i => data.pace[i]);
+                const hrData = indices.map(i => data.heartrate[i]);
+
+                // Chart instances for synchronization
+                let paceChart = null;
+                let hrChart = null;
+                let currentHoverIndex = null;
+
+                // Crosshair/dropline plugin
+                const crosshairPlugin = {
+                    id: 'crosshair',
+                    afterDraw: (chart) => {
+                        if (currentHoverIndex === null) return;
+
+                        const ctx = chart.ctx;
+                        const xScale = chart.scales.x;
+                        const yScale = chart.scales.y;
+                        const x = xScale.getPixelForValue(currentHoverIndex);
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(x, yScale.top);
+                        ctx.lineTo(x, yScale.bottom);
+                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = '#3B82F6';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                };
+
+                // Helper functions for chart-to-map hover interaction
+                function showHoverMarker(chartIndex) {
+                    // Map sampled chart index back to route coordinate index
+                    const routeIndex = Math.min(
+                        Math.floor(indices[chartIndex] * routeCoords.length / data.distance_km.length),
+                        routeCoords.length - 1
+                    );
+                    const coord = routeCoords[routeIndex];
+
+                    if (hoverMarker) {
+                        hoverMarker.setLatLng([coord[1], coord[0]]);
+                    } else {
+                        hoverMarker = L.circleMarker([coord[1], coord[0]], {
+                            radius: 8,
+                            fillColor: '#3B82F6',
+                            color: '#fff',
+                            weight: 2,
+                            fillOpacity: 1
+                        }).addTo(map);
+                    }
+                }
+
+                function updateCrosshairs(index) {
+                    currentHoverIndex = index;
+                    if (paceChart) paceChart.draw();
+                    if (hrChart) hrChart.draw();
+                    if (index !== null) {
+                        showHoverMarker(index);
+                    }
+                }
+
+                function clearCrosshairs() {
+                    currentHoverIndex = null;
+                    if (paceChart) paceChart.draw();
+                    if (hrChart) hrChart.draw();
+                    if (hoverMarker) {
+                        map.removeLayer(hoverMarker);
+                        hoverMarker = null;
+                    }
+                }
+
+                // Common chart options
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    onHover: (event, elements, chart) => {
+                        if (event.type === 'mousemove' && elements.length > 0) {
+                            updateCrosshairs(elements[0].index);
+                        }
+                    },
+                };
+
+                // Pace Chart
+                const paceCtx = document.getElementById('pace-chart');
+                if (paceCtx && paceData.some(v => v !== null)) {
+                    paceChart = new Chart(paceCtx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: paceData,
+                                borderColor: '#10B981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                borderWidth: 2,
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(ctx) {
+                                            return ctx[0].label + ' km';
+                                        },
+                                        label: function(ctx) {
+                                            if (ctx.parsed.y === null) return 'No data';
+                                            const pace = ctx.parsed.y;
+                                            const mins = Math.floor(pace);
+                                            const secs = Math.round((pace - mins) * 60);
+                                            return mins + ':' + secs.toString().padStart(2, '0') + '/km';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    title: { display: false },
+                                    ticks: {
+                                        maxTicksLimit: 5,
+                                        callback: function(val, idx) {
+                                            return this.getLabelForValue(val) + ' km';
+                                        }
+                                    }
+                                },
+                                y: {
+                                    reverse: true,
+                                    title: { display: false },
+                                    ticks: {
+                                        callback: function(value) {
+                                            const mins = Math.floor(value);
+                                            const secs = Math.round((value - mins) * 60);
+                                            return mins + ':' + secs.toString().padStart(2, '0');
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        plugins: [crosshairPlugin]
+                    });
+
+                    paceCtx.parentElement.addEventListener('mouseleave', clearCrosshairs);
+                }
+
+                // Heart Rate Chart
+                if (hrData.some(v => v !== null)) {
+                    document.getElementById('hr-chart-container').classList.remove('hidden');
+                    const hrCtx = document.getElementById('hr-chart');
+                    hrChart = new Chart(hrCtx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: hrData,
+                                borderColor: '#EF4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                borderWidth: 2,
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(ctx) {
+                                            return ctx[0].label + ' km';
+                                        },
+                                        label: function(ctx) {
+                                            if (ctx.parsed.y === null) return 'No data';
+                                            return ctx.parsed.y + ' bpm';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    title: { display: false },
+                                    ticks: {
+                                        maxTicksLimit: 5,
+                                        callback: function(val, idx) {
+                                            return this.getLabelForValue(val) + ' km';
+                                        }
+                                    }
+                                },
+                                y: {
+                                    title: { display: false },
+                                    suggestedMin: 100,
+                                    suggestedMax: 200,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + ' bpm';
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        plugins: [crosshairPlugin]
+                    });
+
+                    hrCtx.parentElement.addEventListener('mouseleave', clearCrosshairs);
+                }
+            })
+            .catch(err => console.log('Stream data not available'));
     });
 </script>
 

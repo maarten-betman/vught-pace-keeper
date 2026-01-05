@@ -9,7 +9,7 @@ import polyline
 from django.contrib.gis.geos import LineString
 from django.utils import timezone
 
-from vught_pace_keeper.training.models import CompletedWorkout, ScheduledWorkout
+from vught_pace_keeper.training.models import ActivityStream, CompletedWorkout, ScheduledWorkout
 
 from .client import StravaActivity, StravaClient
 
@@ -35,7 +35,7 @@ class ActivitySyncService:
     """Service for syncing Strava activities to CompletedWorkout records."""
 
     # Default lookback period for first sync
-    DEFAULT_LOOKBACK_DAYS = 30
+    DEFAULT_LOOKBACK_DAYS = 365
 
     def __init__(self, user: "User"):
         """
@@ -76,6 +76,9 @@ class ActivitySyncService:
             try:
                 workout = self._create_completed_workout(activity)
                 result.imported += 1
+
+                # Fetch and store activity streams (pace, HR, etc.)
+                self._fetch_and_store_streams(activity.id, workout)
 
                 if self._try_match_scheduled(workout):
                     result.matched += 1
@@ -200,11 +203,14 @@ class ActivitySyncService:
 
         for sw in scheduled:
             plan = sw.week.plan
-            if not plan.start_date:
+            # Calculate plan start date from target_race_date and duration
+            if not plan.target_race_date or not plan.duration_weeks:
                 continue
 
+            plan_start = plan.target_race_date - timedelta(weeks=plan.duration_weeks)
+
             # Calculate the date of this scheduled workout
-            week_start = plan.start_date + timedelta(weeks=sw.week.week_number - 1)
+            week_start = plan_start + timedelta(weeks=sw.week.week_number - 1)
             workout_date = week_start + timedelta(days=sw.day_of_week - 1)
 
             if workout_date == workout.date:
@@ -215,3 +221,40 @@ class ActivitySyncService:
                     return True
 
         return False
+
+    def _fetch_and_store_streams(self, activity_id: int, workout: CompletedWorkout) -> None:
+        """
+        Fetch activity streams from Strava and store in ActivityStream.
+
+        Args:
+            activity_id: Strava activity ID
+            workout: CompletedWorkout to associate streams with
+        """
+        try:
+            stream_types = ["time", "distance", "heartrate", "velocity_smooth", "altitude"]
+            streams = self.client.get_activity_streams(activity_id, stream_types)
+
+            if not streams:
+                return
+
+            # Extract data arrays from stream response
+            # Strava returns {type: {data: [...], ...}, ...}
+            time_data = streams.get("time", {}).get("data", [])
+            distance_data = streams.get("distance", {}).get("data", [])
+            heartrate_data = streams.get("heartrate", {}).get("data", [])
+            velocity_data = streams.get("velocity_smooth", {}).get("data", [])
+            altitude_data = streams.get("altitude", {}).get("data", [])
+
+            # Only create stream if we have some data
+            if time_data or distance_data:
+                ActivityStream.objects.create(
+                    workout=workout,
+                    time_data=time_data,
+                    distance_data=distance_data,
+                    heartrate_data=heartrate_data,
+                    velocity_data=velocity_data,
+                    altitude_data=altitude_data,
+                )
+        except Exception:
+            # Don't fail workout import if stream fetch fails
+            pass

@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
@@ -459,6 +459,44 @@ def workout_log_detail(request, pk):
             "route_geojson": route_geojson,
         },
     )
+
+
+@login_required
+@require_GET
+def workout_stream_data(request, pk):
+    """Return activity stream data as JSON for charts."""
+    workout = get_object_or_404(
+        CompletedWorkout,
+        pk=pk,
+        user=request.user,
+    )
+
+    if not hasattr(workout, "stream"):
+        return JsonResponse({"error": "No stream data available"}, status=404)
+
+    stream = workout.stream
+
+    # Convert velocity (m/s) to pace (min/km)
+    # pace = minutes per km = 1 / (m/s * 0.001 km/m * 60 s/min) = 1000 / (60 * v) = 16.667 / v
+    pace_data = []
+    for v in stream.velocity_data:
+        if v and v > 0:
+            pace = 16.6667 / v  # minutes per km
+            pace_data.append(round(pace, 2))
+        else:
+            pace_data.append(None)
+
+    # Convert distance from meters to km for x-axis
+    distance_km = [round(d / 1000, 2) for d in stream.distance_data] if stream.distance_data else []
+
+    return JsonResponse({
+        "time": stream.time_data,
+        "distance": stream.distance_data,
+        "distance_km": distance_km,
+        "heartrate": stream.heartrate_data,
+        "pace": pace_data,
+        "altitude": stream.altitude_data,
+    })
 
 
 @login_required

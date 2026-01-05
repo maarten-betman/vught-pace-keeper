@@ -19,6 +19,7 @@ urlpatterns = [
     # Workout log (completed workouts)
     path("log/", views.workout_log_list, name="workout_log_list"),
     path("log/<int:pk>/", views.workout_log_detail, name="workout_log_detail"),
+    path("log/<int:pk>/streams/", views.workout_stream_data, name="workout_streams"),
     path("log/<int:pk>/delete/", views.workout_log_delete, name="workout_log_delete"),
     path("log/manual/", views.workout_log_manual, name="workout_log_manual"),
     path("log/manual/<int:scheduled_workout_pk>/", views.workout_log_manual, name="workout_log_manual_for_scheduled"),
