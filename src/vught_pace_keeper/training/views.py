@@ -856,3 +856,105 @@ def pace_zone_override(request, pk):
         "training/pace_zones/zone_edit.html",
         {"form": form, "zone": zone},
     )
+
+
+# Analytics Views
+
+
+@login_required
+def analytics_dashboard(request):
+    """Main analytics dashboard view."""
+    from .services.analytics import TrainingAnalyticsService
+
+    analytics = TrainingAnalyticsService(request.user)
+
+    # Get filter parameters
+    plan_id = request.GET.get("plan")
+    date_range = request.GET.get("range", "12w")
+
+    # Resolve date range
+    date_from, date_to = _resolve_date_range(date_range)
+
+    # Get selected plan or default to most recent
+    plan = None
+    if plan_id:
+        plan = TrainingPlan.objects.filter(pk=plan_id, user=request.user).first()
+
+    # Fetch analytics data
+    weekly_summary = analytics.get_weekly_summary()
+    plan_adherence = analytics.get_plan_adherence(
+        plan=plan, date_from=date_from, date_to=date_to
+    )
+    zone_distribution = analytics.get_zone_distribution(
+        date_from=date_from, date_to=date_to
+    )
+    weekly_trends = analytics.get_weekly_trends(
+        weeks=_weeks_from_range(date_range), plan=plan
+    )
+
+    # User's plans for filter dropdown
+    user_plans = TrainingPlan.objects.filter(
+        user=request.user, is_template=False
+    ).order_by("-created_at")
+
+    context = {
+        "weekly_summary": weekly_summary,
+        "plan_adherence": plan_adherence,
+        "zone_distribution": zone_distribution,
+        "weekly_trends": weekly_trends,
+        "user_plans": user_plans,
+        "selected_plan": plan,
+        "selected_range": date_range,
+        "range_choices": [
+            ("4w", "Last 4 weeks"),
+            ("8w", "Last 8 weeks"),
+            ("12w", "Last 12 weeks"),
+            ("all", "All time"),
+        ],
+    }
+
+    return render(request, "training/analytics/dashboard.html", context)
+
+
+@login_required
+@require_GET
+def analytics_weekly_summary(request):
+    """HTMX partial for weekly summary refresh."""
+    from .services.analytics import TrainingAnalyticsService
+
+    analytics = TrainingAnalyticsService(request.user)
+
+    week_offset = int(request.GET.get("week_offset", 0))
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday()) - timedelta(weeks=week_offset)
+
+    summary = analytics.get_weekly_summary(week_start=week_start)
+
+    return render(
+        request,
+        "training/analytics/partials/weekly_summary.html",
+        {
+            "summary": summary,
+            "week_offset": week_offset,
+        },
+    )
+
+
+def _resolve_date_range(range_str: str) -> tuple:
+    """Convert range string to date tuple."""
+    today = date.today()
+
+    if range_str == "4w":
+        return today - timedelta(weeks=4), today
+    elif range_str == "8w":
+        return today - timedelta(weeks=8), today
+    elif range_str == "12w":
+        return today - timedelta(weeks=12), today
+    else:  # 'all'
+        return None, None
+
+
+def _weeks_from_range(range_str: str) -> int:
+    """Get number of weeks from range string."""
+    mapping = {"4w": 4, "8w": 8, "12w": 12, "all": 52}
+    return mapping.get(range_str, 12)

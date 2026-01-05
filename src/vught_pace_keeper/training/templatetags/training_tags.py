@@ -1,6 +1,9 @@
 """Template tags and filters for training app."""
 
+import json
+
 from django import template
+from django.utils.safestring import mark_safe
 
 register = template.Library()
 
@@ -224,3 +227,57 @@ def pace_in_zone(pace, user):
             return "repetition"
 
     return None
+
+
+# Chart.js JSON data filters
+
+
+@register.filter
+def json_labels(trends):
+    """Extract week labels from trends for Chart.js."""
+    labels = [t.week_label for t in trends]
+    return mark_safe(json.dumps(labels))
+
+
+@register.filter
+def json_actual(trends):
+    """Extract actual distances from trends."""
+    values = [float(t.actual_distance_km) for t in trends]
+    return mark_safe(json.dumps(values))
+
+
+@register.filter
+def json_planned(trends):
+    """Extract planned distances from trends."""
+    values = [
+        float(t.planned_distance_km) if t.planned_distance_km else None for t in trends
+    ]
+    return mark_safe(json.dumps(values))
+
+
+@register.filter
+def json_zone_names(distribution):
+    """Extract zone names for Chart.js."""
+    names = [z.zone_name for z in distribution]
+    return mark_safe(json.dumps(names))
+
+
+@register.filter
+def json_zone_values(distribution):
+    """Extract zone percentages for Chart.js."""
+    values = [z.percentage for z in distribution]
+    return mark_safe(json.dumps(values))
+
+
+@register.filter
+def json_zone_colors(distribution):
+    """Extract zone colors for Chart.js."""
+    colors = [z.zone_color for z in distribution]
+    return mark_safe(json.dumps(colors))
+
+
+@register.filter
+def json_pace(trends):
+    """Extract average pace values from trends for Chart.js."""
+    values = [float(t.average_pace) if t.average_pace else None for t in trends]
+    return mark_safe(json.dumps(values))

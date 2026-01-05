@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load training_tags %}
+
+{% block title %}Training Analytics - Vught Pace Keeper{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header with Filters -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h1 class="text-2xl font-bold">Training Analytics</h1>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-3">
+            <select
+                name="plan"
+                class="form-input text-sm py-2"
+                onchange="window.location.href='{% url 'training:analytics_dashboard' %}?plan=' + this.value + '&range=' + document.querySelector('[name=range]').value"
+            >
+                <option value="">All Training</option>
+                {% for plan in user_plans %}
+                <option value="{{ plan.pk }}" {% if selected_plan.pk == plan.pk %}selected{% endif %}>
+                    {{ plan.name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select
+                name="range"
+                class="form-input text-sm py-2"
+                onchange="window.location.href='{% url 'training:analytics_dashboard' %}?range=' + this.value + '&plan=' + document.querySelector('[name=plan]').value"
+            >
+                {% for value, label in range_choices %}
+                <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Weekly Summary Card -->
+    <div id="weekly-summary-container" class="mb-6">
+        {% include "training/analytics/partials/weekly_summary.html" with summary=weekly_summary week_offset=0 %}
+    </div>
+
+    <!-- Main Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Distance Over Time Chart -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Weekly Distance</h3>
+            <div class="h-64">
+                <canvas id="distance-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Pace Zone Distribution -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Training Zone Distribution</h3>
+            <div class="h-64 flex items-center justify-center">
+                {% if zone_distribution %}
+                <canvas id="zone-chart"></canvas>
+                {% else %}
+                <div class="text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <p>Set up pace zones to see distribution</p>
+                    <a href="{% url 'training:pace_zone_calculator' %}" class="text-strava hover:underline text-sm">
+                        Configure Pace Zones
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% if zone_distribution %}
+            <p class="text-xs text-gray-500 mt-2 text-center">
+                Aim for ~80% easy/recovery, ~20% tempo and above
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Plan Adherence Metrics -->
+    <div class="card mb-6">
+        <h3 class="font-semibold mb-4">Plan Adherence</h3>
+        {% if plan_adherence.total_scheduled > 0 %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-strava">{{ plan_adherence.completion_rate|floatformat:0 }}%</div>
+                <div class="text-xs text-gray-500 uppercase">Completion Rate</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold">{{ plan_adherence.total_completed }}/{{ plan_adherence.total_scheduled }}</div>
+                <div class="text-xs text-gray-500 uppercase">Workouts</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold">{{ plan_adherence.distance_actual_km|floatformat:1 }}</div>
+                <div class="text-xs text-gray-500 uppercase">km Completed</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold {% if plan_adherence.missed_workouts > 0 %}text-orange-600{% else %}text-green-600{% endif %}">
+                    {{ plan_adherence.missed_workouts }}
+                </div>
+                <div class="text-xs text-gray-500 uppercase">Missed</div>
+            </div>
+        </div>
+
+        <!-- Distance adherence bar -->
+        {% if plan_adherence.distance_planned_km > 0 %}
+        <div class="mt-6">
+            <div class="flex justify-between text-sm mb-1">
+                <span>Distance Progress</span>
+                <span>{{ plan_adherence.distance_actual_km|floatformat:1 }} / {{ plan_adherence.distance_planned_km|floatformat:1 }} km</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-strava h-3 rounded-full transition-all duration-500" style="width: {{ plan_adherence.distance_adherence|floatformat:0 }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center text-gray-500 py-8">
+            <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            <p>Create a training plan to track adherence</p>
+            <a href="{% url 'training:plan_create' %}" class="text-strava hover:underline text-sm">
+                Create Training Plan
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Distance Chart
+    const distanceCtx = document.getElementById('distance-chart');
+    if (distanceCtx) {
+        new Chart(distanceCtx, {
+            type: 'line',
+            data: {
+                labels: {{ weekly_trends|json_labels }},
+                datasets: [
+                    {
+                        label: 'Actual Distance',
+                        data: {{ weekly_trends|json_actual }},
+                        borderColor: '#FC4C02',
+                        backgroundColor: 'rgba(252, 76, 2, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'Planned Distance',
+                        data: {{ weekly_trends|json_planned }},
+                        borderColor: '#9CA3AF',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Distance (km)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Zone Distribution Chart
+    const zoneCtx = document.getElementById('zone-chart');
+    if (zoneCtx) {
+        const zoneNames = {{ zone_distribution|json_zone_names }};
+        const zoneValues = {{ zone_distribution|json_zone_values }};
+        const zoneColors = {{ zone_distribution|json_zone_colors }};
+
+        // Only create chart if we have data
+        if (zoneValues.some(v => v > 0)) {
+            new Chart(zoneCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: zoneNames,
+                    datasets: [{
+                        data: zoneValues,
+                        backgroundColor: zoneColors,
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

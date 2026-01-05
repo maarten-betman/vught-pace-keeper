@@ -30,4 +30,11 @@ urlpatterns = [
     path("zones/calculator/", views.pace_zone_calculator, name="pace_zone_calculator"),
     path("zones/save/", views.pace_zone_save, name="pace_zone_save"),
     path("zones/<int:pk>/edit/", views.pace_zone_override, name="pace_zone_override"),
+    # Analytics
+    path("analytics/", views.analytics_dashboard, name="analytics_dashboard"),
+    path(
+        "analytics/weekly-summary/",
+        views.analytics_weekly_summary,
+        name="analytics_weekly_summary",
+    ),
 ]
