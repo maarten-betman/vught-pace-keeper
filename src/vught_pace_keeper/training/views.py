@@ -1219,6 +1219,25 @@ def personal_record_delete(request, pk):
     return redirect("training:records_list")
 
 
+@login_required
+@require_POST
+def calculate_records(request):
+    """Calculate personal records from all logged workouts."""
+    from .services.records import PersonalRecordService
+
+    clear_existing = request.POST.get("clear_existing") == "1"
+    service = PersonalRecordService(request.user)
+    results = service.calculate_records_from_workouts(clear_existing=clear_existing)
+
+    new_records = sum(1 for r in results.values() if r.is_new_pr)
+    if new_records:
+        messages.success(request, f"Found {new_records} personal record(s) from your workouts!")
+    else:
+        messages.info(request, "No new personal records found in your workouts.")
+
+    return redirect("training:records_list")
+
+
 # ============================================================================
 # Goals Views
 # ============================================================================

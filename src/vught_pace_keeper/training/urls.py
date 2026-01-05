@@ -49,6 +49,7 @@ urlpatterns = [
     # Personal Records
     path("records/", views.personal_records_list, name="records_list"),
     path("records/add/", views.personal_record_add, name="record_add"),
+    path("records/calculate/", views.calculate_records, name="records_calculate"),
     path("records/<int:pk>/delete/", views.personal_record_delete, name="record_delete"),
     # Goals
     path("goals/", views.goal_list, name="goal_list"),

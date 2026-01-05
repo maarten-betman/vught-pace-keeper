@@ -202,3 +202,79 @@ class PersonalRecordService:
             PersonalRecord.objects.filter(user=self.user, distance=distance)
             .order_by("time")
         )
+
+    def calculate_records_from_workouts(
+        self, clear_existing: bool = False
+    ) -> dict[str, PRCheckResult]:
+        """
+        Scan all completed workouts and calculate personal records.
+
+        Args:
+            clear_existing: If True, delete all existing auto-detected records
+                           before recalculating. Manual records are preserved.
+
+        Returns:
+            Dictionary of distance -> PRCheckResult for each record found/created.
+        """
+        if clear_existing:
+            # Only delete non-manual records
+            PersonalRecord.objects.filter(user=self.user, is_manual=False).delete()
+
+        # Get all completed workouts with distance and duration
+        workouts = (
+            CompletedWorkout.objects.filter(user=self.user)
+            .exclude(actual_distance_km__isnull=True)
+            .exclude(actual_duration__isnull=True)
+            .order_by("date")
+        )
+
+        # Track best times for each distance
+        best_times: dict[str, tuple[timedelta, CompletedWorkout]] = {}
+
+        for workout in workouts:
+            workout_distance = float(workout.actual_distance_km)
+            workout_time = workout.actual_duration
+
+            # Check against each standard distance
+            for distance_code, target_km in PersonalRecord.DISTANCE_KM.items():
+                if abs(workout_distance - target_km) <= DISTANCE_TOLERANCE:
+                    # This workout matches a standard distance
+                    if distance_code not in best_times:
+                        best_times[distance_code] = (workout_time, workout)
+                    elif workout_time < best_times[distance_code][0]:
+                        best_times[distance_code] = (workout_time, workout)
+
+        # Create records for best times
+        results = {}
+        for distance_code, (time, workout) in best_times.items():
+            # Check if this beats existing records (including manual ones)
+            existing_pr = self.get_record_for_distance(distance_code)
+
+            if existing_pr is None or time < existing_pr.time:
+                # Create new record if it doesn't already exist from this workout
+                existing_from_workout = PersonalRecord.objects.filter(
+                    user=self.user,
+                    distance=distance_code,
+                    source_workout=workout,
+                ).first()
+
+                if not existing_from_workout:
+                    self.create_record(workout, distance_code, time)
+
+                results[distance_code] = PRCheckResult(
+                    is_new_pr=True,
+                    distance=distance_code,
+                    time=time,
+                    previous_time=existing_pr.time if existing_pr else None,
+                    improvement=(existing_pr.time - time) if existing_pr else None,
+                )
+            else:
+                results[distance_code] = PRCheckResult(
+                    is_new_pr=False,
+                    distance=distance_code,
+                    time=time,
+                    previous_time=existing_pr.time if existing_pr else None,
+                    improvement=None,
+                )
+
+        return results
