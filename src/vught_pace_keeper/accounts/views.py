@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from vught_pace_keeper.training.models import TrainingPlan
+from vught_pace_keeper.training.services.analytics import TrainingAnalyticsService
 
 
 def landing_page(request):
@@ -21,9 +22,14 @@ def dashboard(request):
     )
     template_plans = TrainingPlan.objects.filter(is_template=True).order_by("name")
 
+    # Get weekly summary for quick stats
+    analytics = TrainingAnalyticsService(request.user)
+    weekly_summary = analytics.get_weekly_summary()
+
     context = {
         "training_plans": training_plans,
         "template_plans": template_plans,
         "strava_connected": bool(request.user.strava_athlete_id),
+        "weekly_summary": weekly_summary,
     }
     return render(request, "dashboard.html", context)

@@ -281,3 +281,10 @@ def json_pace(trends):
     """Extract average pace values from trends for Chart.js."""
     values = [float(t.average_pace) if t.average_pace else None for t in trends]
     return mark_safe(json.dumps(values))
+
+
+@register.filter
+def json_heart_rate(trends):
+    """Extract average heart rate values from trends for Chart.js."""
+    values = [t.average_heart_rate for t in trends]
+    return mark_safe(json.dumps(values))

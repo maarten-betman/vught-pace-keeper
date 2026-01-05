@@ -63,6 +63,7 @@ class WeeklyTrend:
     actual_distance_km: Decimal
     planned_distance_km: Optional[Decimal]
     average_pace: Optional[Decimal]
+    average_heart_rate: Optional[int]
 
 
 class TrainingAnalyticsService:
@@ -257,6 +258,7 @@ class TrainingAnalyticsService:
             .annotate(
                 total_distance=Sum("actual_distance_km"),
                 avg_pace=Avg("average_pace_min_per_km"),
+                avg_hr=Avg("average_heart_rate"),
             )
             .order_by("week")
         )
@@ -316,6 +318,11 @@ class TrainingAnalyticsService:
                 training_week_num = (current - plan_start).days // 7 + 1
                 planned = planned_weekly.get(training_week_num)
 
+            # Get average HR, round to int if present
+            avg_hr = week_data.get("avg_hr")
+            if avg_hr is not None:
+                avg_hr = int(round(avg_hr))
+
             trends.append(
                 WeeklyTrend(
                     week_start=current,
@@ -323,6 +330,7 @@ class TrainingAnalyticsService:
                     actual_distance_km=actual,
                     planned_distance_km=planned,
                     average_pace=week_data.get("avg_pace"),
+                    average_heart_rate=avg_hr,
                 )
             )
 
