@@ -1,0 +1,55 @@
+<form method="post" hx-post="{% url 'training:plan_create' %}" hx-target="#wizard-content" hx-swap="innerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="2">
+
+    <div class="form-group">
+        <label for="id_name" class="form-label">Plan Name <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input type="text" name="name" id="id_name" value="{{ form.name.value|default:'' }}"
+               class="form-input" placeholder="e.g., Spring Marathon 2026">
+        <p class="text-sm text-gray-500 mt-1">Leave blank for auto-generated name</p>
+    </div>
+
+    <div class="form-group">
+        <label for="id_race_date" class="form-label">Race Date</label>
+        <input type="date" name="race_date" id="id_race_date"
+               value="{{ form.race_date.value|date:'Y-m-d'|default:'' }}"
+               min="{{ today }}" required class="form-input max-w-xs">
+        {% if form.race_date.errors %}
+        <ul class="text-red-600 text-sm mt-2">
+            {% for error in form.race_date.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Goal Time <span class="text-gray-400 font-normal">(optional)</span></label>
+        <div class="flex items-center gap-2">
+            <input type="number" name="goal_time_hours" id="id_goal_time_hours"
+                   value="{{ form.goal_time_hours.value|default:'' }}"
+                   min="0" max="10" placeholder="H" class="form-input w-16 text-center">
+            <span class="text-gray-500">:</span>
+            <input type="number" name="goal_time_minutes" id="id_goal_time_minutes"
+                   value="{{ form.goal_time_minutes.value|default:'' }}"
+                   min="0" max="59" placeholder="MM" class="form-input w-16 text-center">
+            <span class="text-gray-500">:</span>
+            <input type="number" name="goal_time_seconds" id="id_goal_time_seconds"
+                   value="{{ form.goal_time_seconds.value|default:'' }}"
+                   min="0" max="59" placeholder="SS" class="form-input w-16 text-center">
+        </div>
+        <p class="text-sm text-gray-500 mt-1">Format: Hours : Minutes : Seconds (e.g., 3:30:00)</p>
+        {% if form.non_field_errors %}
+        <ul class="text-red-600 text-sm mt-2">
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="flex justify-between pt-4 border-t border-gray-200">
+        <button type="submit" name="action" value="back" class="btn btn-secondary">
+            Back
+        </button>
+        <button type="submit" name="action" value="next" class="btn btn-strava">
+            Preview Plan
+        </button>
+    </div>
+</form>

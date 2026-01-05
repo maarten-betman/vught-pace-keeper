@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="text-center" style="padding: 4rem 0;">
-    <h1>Track Your Marathon Training</h1>
-    <p class="text-secondary mb-1">
+<div class="text-center py-16">
+    <h1 class="text-3xl font-bold mb-4">Track Your Marathon Training</h1>
+    <p class="text-gray-500 mb-8 max-w-md mx-auto">
         Connect with Strava to sync your workouts and follow personalized training plans.
     </p>
 
@@ -15,8 +15,8 @@
             Connect with Strava
         </a>
 
-        <p class="mt-2 text-secondary">
-            <small>Or <a href="{% url 'account_login' %}">sign in with email</a></small>
+        <p class="mt-4 text-gray-500 text-sm">
+            Or <a href="{% url 'account_login' %}" class="text-strava hover:text-strava-dark">sign in with email</a>
         </p>
     {% else %}
         <a href="{% url 'dashboard' %}" class="btn btn-secondary">
@@ -25,19 +25,21 @@
     {% endif %}
 </div>
 
-<div style="max-width: 600px; margin: 0 auto;">
-    <h2>Features</h2>
-    <div class="card">
-        <h3>Training Plans</h3>
-        <p class="text-secondary">Follow structured marathon and half-marathon training plans tailored to your goals.</p>
-    </div>
-    <div class="card">
-        <h3>Strava Integration</h3>
-        <p class="text-secondary">Automatically sync your activities and track your progress against scheduled workouts.</p>
-    </div>
-    <div class="card">
-        <h3>Pace Zones</h3>
-        <p class="text-secondary">Define personalized pace zones and see if your workouts hit the target intensity.</p>
+<div class="max-w-xl mx-auto">
+    <h2 class="text-xl font-semibold mb-4">Features</h2>
+    <div class="grid gap-4">
+        <div class="card">
+            <h3 class="font-semibold mb-2">Training Plans</h3>
+            <p class="text-gray-500 text-sm">Follow structured marathon and half-marathon training plans tailored to your goals.</p>
+        </div>
+        <div class="card">
+            <h3 class="font-semibold mb-2">Strava Integration</h3>
+            <p class="text-gray-500 text-sm">Automatically sync your activities and track your progress against scheduled workouts.</p>
+        </div>
+        <div class="card">
+            <h3 class="font-semibold mb-2">Pace Zones</h3>
+            <p class="text-gray-500 text-sm">Define personalized pace zones and see if your workouts hit the target intensity.</p>
+        </div>
     </div>
 </div>
 {% endblock %}

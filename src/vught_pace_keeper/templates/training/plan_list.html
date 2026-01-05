@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}My Training Plans - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">My Training Plans</h1>
+    <a href="{% url 'training:plan_create' %}" class="btn btn-strava">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Plan
+    </a>
+</div>
+
+{% if plans %}
+<div class="grid gap-4 mb-8">
+    {% for plan in plans %}
+    <a href="{% url 'training:plan_detail' pk=plan.pk %}" class="card hover:border-strava transition-colors">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="font-semibold text-lg">{{ plan.name }}</h3>
+                <p class="text-gray-500 text-sm">
+                    {{ plan.get_plan_type_display }} &bull;
+                    {{ plan.duration_weeks }} weeks &bull;
+                    {{ plan.get_methodology_display }}
+                </p>
+            </div>
+            <div class="text-right text-sm text-gray-500">
+                {% if plan.target_race_date %}
+                <p>Race: {{ plan.target_race_date|date:"M j, Y" }}</p>
+                {% endif %}
+                {% if plan.goal_time %}
+                <p>Goal: {{ plan.goal_time }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-12">
+    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No training plans yet</h3>
+    <p class="text-gray-500 mb-4">Create your first plan or start from a template below.</p>
+    <a href="{% url 'training:plan_create' %}" class="btn btn-strava">Create Your First Plan</a>
+</div>
+{% endif %}
+
+{% if templates %}
+<h2 class="text-xl font-semibold mb-4">Plan Templates</h2>
+<div class="grid gap-4">
+    {% for template in templates %}
+    <div class="card">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="font-semibold">{{ template.name }}</h3>
+                <p class="text-gray-500 text-sm">
+                    {{ template.get_plan_type_display }} &bull;
+                    {{ template.duration_weeks }} weeks &bull;
+                    {{ template.get_methodology_display }}
+                </p>
+                {% if template.description %}
+                <p class="text-sm text-gray-600 mt-2">{{ template.description }}</p>
+                {% endif %}
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'training:plan_detail' pk=template.pk %}" class="btn btn-secondary text-sm py-2 px-4">
+                    View
+                </a>
+                <a href="{% url 'training:plan_copy' pk=template.pk %}" class="btn btn-strava text-sm py-2 px-4">
+                    Use Template
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

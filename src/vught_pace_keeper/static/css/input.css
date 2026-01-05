@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom component classes using Tailwind's @apply */
+@layer components {
+  .btn {
+    @apply px-6 py-3 rounded font-semibold cursor-pointer inline-flex items-center gap-2 no-underline text-base transition-colors duration-200;
+  }
+
+  .btn-strava {
+    @apply bg-strava text-white hover:bg-strava-dark;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-800 text-white hover:bg-gray-700;
+  }
+
+  .btn-link {
+    @apply bg-transparent p-0 text-gray-500 hover:text-gray-900;
+  }
+
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg p-6 mb-4;
+  }
+
+  /* Form inputs */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-strava focus:border-transparent;
+  }
+
+  .form-label {
+    @apply block mb-2 font-medium text-gray-900;
+  }
+
+  .form-group {
+    @apply mb-6;
+  }
+
+  /* Radio card for wizard */
+  .radio-card {
+    @apply flex items-center p-4 border border-gray-200 rounded cursor-pointer transition-colors duration-200 hover:border-strava;
+  }
+
+  .radio-card.selected {
+    @apply border-strava bg-orange-50;
+  }
+
+  /* Wizard progress */
+  .wizard-step {
+    @apply flex-1 text-center py-4 px-2 border-b-2 border-gray-200 text-gray-500;
+  }
+
+  .wizard-step.active {
+    @apply border-strava text-gray-900 font-semibold;
+  }
+
+  .wizard-step.completed {
+    @apply border-green-500 text-green-500;
+  }
+
+  /* Week accordion */
+  .week-accordion {
+    @apply border border-gray-200 rounded mb-2;
+  }
+
+  .week-accordion summary {
+    @apply p-4 cursor-pointer flex justify-between items-center list-none;
+  }
+
+  .week-accordion summary::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .week-accordion[open] summary {
+    @apply border-b border-gray-200;
+  }
+
+  .week-content {
+    @apply p-4;
+  }
+}
+
+/* HTMX loading indicator */
+@layer utilities {
+  .htmx-indicator {
+    @apply opacity-0 transition-opacity duration-200;
+  }
+
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    @apply opacity-100;
+  }
+}

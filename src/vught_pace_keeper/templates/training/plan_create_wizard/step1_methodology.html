@@ -1,0 +1,75 @@
+<form method="post" hx-post="{% url 'training:plan_create' %}" hx-target="#wizard-content" hx-swap="innerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="1">
+
+    <div class="form-group">
+        <label class="form-label">Race Distance</label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {% for value, label in form.plan_type.field.choices %}
+            <label class="radio-card {% if form.plan_type.value == value %}selected{% endif %}"
+                   onclick="selectRadio(this, 'plan_type')">
+                <input type="radio" name="plan_type" value="{{ value }}"
+                       {% if form.plan_type.value == value %}checked{% endif %}
+                       class="hidden">
+                <div class="ml-3">
+                    <span class="font-semibold block">{{ label }}</span>
+                    <span class="text-sm text-gray-500">
+                        {% if value == "half_marathon" %}21.1 km / 13.1 miles{% else %}42.2 km / 26.2 miles{% endif %}
+                    </span>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+        {% if form.plan_type.errors %}
+        <ul class="text-red-600 text-sm mt-2">
+            {% for error in form.plan_type.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Training Methodology</label>
+        <div class="grid grid-cols-1 gap-3">
+            {% for value, label in form.methodology.field.choices %}
+            <label class="radio-card {% if form.methodology.value == value %}selected{% endif %}"
+                   onclick="selectRadio(this, 'methodology')">
+                <input type="radio" name="methodology" value="{{ value }}"
+                       {% if form.methodology.value == value %}checked{% endif %}
+                       class="hidden">
+                <div class="ml-3">
+                    <span class="font-semibold block">{{ label }}</span>
+                    <span class="text-sm text-gray-500">
+                        {% if value == "custom" %}Create your own week-by-week training structure{% endif %}
+                    </span>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+        {% if form.methodology.errors %}
+        <ul class="text-red-600 text-sm mt-2">
+            {% for error in form.methodology.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="flex justify-between pt-4 border-t border-gray-200">
+        <button type="submit" name="action" value="cancel" class="btn btn-link">
+            Cancel
+        </button>
+        <button type="submit" name="action" value="next" class="btn btn-strava">
+            Next: Race Details
+        </button>
+    </div>
+</form>
+
+<script>
+function selectRadio(label, name) {
+    // Deselect all in group
+    document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+        input.closest('.radio-card').classList.remove('selected');
+    });
+    // Select this one
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+}
+</script>

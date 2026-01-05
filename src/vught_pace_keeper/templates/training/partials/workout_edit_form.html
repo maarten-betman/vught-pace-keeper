@@ -1,0 +1,61 @@
+{% load training_tags %}
+
+<tr id="workout-{{ workout.pk }}" class="bg-orange-50">
+    <td colspan="5" class="py-4 px-2">
+        <form hx-post="{% url 'training:workout_update' pk=workout.pk %}"
+              hx-target="#workout-{{ workout.pk }}"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Type</label>
+                    {{ form.workout_type }}
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Distance (km)</label>
+                    {{ form.target_distance_km }}
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Duration</label>
+                    {{ form.target_duration }}
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Pace (min/km)</label>
+                    {{ form.target_pace_min_per_km }}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-xs text-gray-500 block mb-1">Description</label>
+                {{ form.description }}
+            </div>
+
+            {% if form.errors %}
+            <div class="text-red-600 text-sm mb-4">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                    <p>{{ field.label }}: {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="flex justify-end gap-2">
+                <button type="button"
+                        hx-get="{% url 'training:workout_detail' pk=workout.pk %}"
+                        hx-target="#workout-{{ workout.pk }}"
+                        hx-swap="outerHTML"
+                        class="btn btn-secondary text-sm py-2 px-4">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-strava text-sm py-2 px-4">
+                    Save
+                </button>
+            </div>
+        </form>
+    </td>
+</tr>

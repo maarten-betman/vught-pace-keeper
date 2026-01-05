@@ -1,0 +1,32 @@
+{% load training_tags %}
+
+<tr id="workout-{{ workout.pk }}" class="border-b border-gray-100">
+    <td class="py-2">{{ workout.day_of_week|day_name }}</td>
+    <td class="py-2">
+        <span class="px-2 py-0.5 rounded text-xs
+            {% if workout.workout_type == 'rest' %}bg-gray-100 text-gray-600
+            {% elif workout.workout_type == 'easy' %}bg-green-100 text-green-700
+            {% elif workout.workout_type == 'long' %}bg-blue-100 text-blue-700
+            {% elif workout.workout_type == 'tempo' %}bg-orange-100 text-orange-700
+            {% elif workout.workout_type == 'interval' %}bg-red-100 text-red-700
+            {% elif workout.workout_type == 'recovery' %}bg-teal-100 text-teal-700
+            {% endif %}">
+            {{ workout.get_workout_type_display }}
+        </span>
+    </td>
+    <td class="py-2">
+        {% if workout.target_distance_km %}{{ workout.target_distance_km }} km{% else %}-{% endif %}
+    </td>
+    <td class="py-2 text-gray-500">{{ workout.description|default:"-" }}</td>
+    {% if can_edit %}
+    <td class="py-2 text-right">
+        <button type="button"
+                hx-get="{% url 'training:workout_edit' pk=workout.pk %}"
+                hx-target="#workout-{{ workout.pk }}"
+                hx-swap="outerHTML"
+                class="text-strava hover:text-strava-dark text-sm">
+            Edit
+        </button>
+    </td>
+    {% endif %}
+</tr>

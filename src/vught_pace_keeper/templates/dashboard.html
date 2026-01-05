@@ -3,66 +3,79 @@
 {% block title %}Dashboard - Vught Pace Keeper{% endblock %}
 
 {% block content %}
-<h1>Welcome, {{ user.first_name|default:user.username }}!</h1>
+<h1 class="text-2xl font-bold mb-6">Welcome, {{ user.first_name|default:user.username }}!</h1>
 
 {% if strava_connected %}
-    <p class="text-secondary">
-        Your Strava account is connected (Athlete ID: {{ user.strava_athlete_id }})
-    </p>
+<p class="text-gray-500 mb-6">
+    Your Strava account is connected (Athlete ID: {{ user.strava_athlete_id }})
+</p>
 {% else %}
-    <div class="card" style="background: #fff8f5; border-color: #FC4C02;">
-        <p style="margin: 0;">
-            <strong>Connect your Strava account</strong> to sync your activities and track your training progress.
-        </p>
-        <a href="{% url 'strava_login' %}" class="btn btn-strava" style="margin-top: 1rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-            </svg>
-            Connect Strava
-        </a>
-    </div>
+<div class="card bg-orange-50 border-strava mb-6">
+    <p class="mb-4">
+        <strong>Connect your Strava account</strong> to sync your activities and track your training progress.
+    </p>
+    <a href="{% url 'strava_login' %}" class="btn btn-strava">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+        </svg>
+        Connect Strava
+    </a>
+</div>
 {% endif %}
 
-<section style="margin-top: 2rem;">
-    <h2>Your Training Plans</h2>
+<section class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Your Training Plans</h2>
+        <a href="{% url 'training:plan_list' %}" class="text-strava hover:text-strava-dark text-sm">
+            View All &rarr;
+        </a>
+    </div>
+
     {% if training_plans %}
-        {% for plan in training_plans %}
-            <div class="card">
-                <h3 style="margin-bottom: 0.5rem;">{{ plan.name }}</h3>
-                <p class="text-secondary" style="margin: 0;">
-                    {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
-                    {% if plan.target_race_date %}
-                        &bull; Race: {{ plan.target_race_date }}
-                    {% endif %}
-                </p>
-            </div>
-        {% endfor %}
-    {% else %}
-        <div class="card">
-            <p class="text-secondary" style="margin: 0;">
-                You don't have any training plans yet.
+    <div class="grid gap-4">
+        {% for plan in training_plans|slice:":3" %}
+        <a href="{% url 'training:plan_detail' pk=plan.pk %}" class="card hover:border-strava transition-colors">
+            <h3 class="font-semibold mb-1">{{ plan.name }}</h3>
+            <p class="text-gray-500 text-sm">
+                {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
+                {% if plan.target_race_date %}
+                &bull; Race: {{ plan.target_race_date|date:"M j, Y" }}
+                {% endif %}
             </p>
-        </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-center py-8">
+        <p class="text-gray-500 mb-4">You don't have any training plans yet.</p>
+        <a href="{% url 'training:plan_create' %}" class="btn btn-strava">Create Your First Plan</a>
+    </div>
     {% endif %}
 </section>
 
 {% if template_plans %}
-<section style="margin-top: 2rem;">
-    <h2>Available Templates</h2>
-    {% for plan in template_plans %}
+<section>
+    <h2 class="text-xl font-semibold mb-4">Quick Start Templates</h2>
+    <div class="grid gap-4">
+        {% for plan in template_plans|slice:":2" %}
         <div class="card">
-            <h3 style="margin-bottom: 0.5rem;">{{ plan.name }}</h3>
-            <p class="text-secondary" style="margin: 0;">
-                {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
-                {% if plan.goal_time %}
-                    &bull; Goal: {{ plan.goal_time }}
-                {% endif %}
-            </p>
-            {% if plan.description %}
-                <p style="margin-top: 0.5rem; margin-bottom: 0;">{{ plan.description }}</p>
-            {% endif %}
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-semibold">{{ plan.name }}</h3>
+                    <p class="text-gray-500 text-sm">
+                        {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
+                        {% if plan.goal_time %}
+                        &bull; Goal: {{ plan.goal_time }}
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'training:plan_copy' pk=plan.pk %}" class="btn btn-strava text-sm py-2 px-4">
+                    Use Template
+                </a>
+            </div>
         </div>
-    {% endfor %}
+        {% endfor %}
+    </div>
 </section>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,97 @@
+{% load training_tags %}
+
+<form method="post" hx-post="{% url 'training:plan_create' %}" hx-target="#wizard-content" hx-swap="innerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="3">
+
+    {% if preview %}
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">{{ preview.name }}</h2>
+        <p class="text-gray-500">
+            {{ preview.duration_weeks }} weeks &bull;
+            {{ preview.plan_type|title|cut:"_" }} &bull;
+            {{ preview.methodology|title }} methodology
+        </p>
+    </div>
+
+    <div class="space-y-2 max-h-96 overflow-y-auto mb-6">
+        {% for week in preview.weeks %}
+        <details class="week-accordion" {% if forloop.first %}open{% endif %}>
+            <summary>
+                <div class="flex items-center gap-3">
+                    <span class="font-semibold">Week {{ week.week_number }}</span>
+                    <span class="text-sm px-2 py-0.5 rounded
+                        {% if week.focus == 'base' %}bg-green-100 text-green-800
+                        {% elif week.focus == 'build' %}bg-blue-100 text-blue-800
+                        {% elif week.focus == 'peak' %}bg-orange-100 text-orange-800
+                        {% elif week.focus == 'taper' %}bg-purple-100 text-purple-800
+                        {% endif %}">
+                        {{ week.focus|title }}
+                    </span>
+                </div>
+                <span class="text-gray-500 text-sm">{{ week.total_distance_km }} km</span>
+            </summary>
+            <div class="week-content">
+                {% if week.notes %}
+                <p class="text-sm text-gray-600 italic mb-3">{{ week.notes }}</p>
+                {% endif %}
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-gray-500 border-b">
+                            <th class="pb-2 font-medium">Day</th>
+                            <th class="pb-2 font-medium">Type</th>
+                            <th class="pb-2 font-medium">Distance</th>
+                            <th class="pb-2 font-medium">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for workout in week.workouts %}
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2">{{ workout.day_of_week|day_name }}</td>
+                            <td class="py-2">
+                                <span class="px-2 py-0.5 rounded text-xs
+                                    {% if workout.workout_type == 'rest' %}bg-gray-100 text-gray-600
+                                    {% elif workout.workout_type == 'easy' %}bg-green-100 text-green-700
+                                    {% elif workout.workout_type == 'long' %}bg-blue-100 text-blue-700
+                                    {% elif workout.workout_type == 'tempo' %}bg-orange-100 text-orange-700
+                                    {% elif workout.workout_type == 'interval' %}bg-red-100 text-red-700
+                                    {% elif workout.workout_type == 'recovery' %}bg-teal-100 text-teal-700
+                                    {% endif %}">
+                                    {{ workout.workout_type|title }}
+                                </span>
+                            </td>
+                            <td class="py-2">
+                                {% if workout.target_distance_km %}{{ workout.target_distance_km }} km{% else %}-{% endif %}
+                            </td>
+                            <td class="py-2 text-gray-500">{{ workout.description }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+
+    <div class="flex justify-between pt-4 border-t border-gray-200">
+        <button type="submit" name="action" value="back" class="btn btn-secondary">
+            Back
+        </button>
+        <button type="submit" name="action" value="next" class="btn btn-strava">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Create Plan
+        </button>
+    </div>
+
+    {% else %}
+    <div class="text-center py-8">
+        <p class="text-gray-500 mb-4">Unable to generate preview. Please go back and check your inputs.</p>
+        <button type="submit" name="action" value="back" class="btn btn-secondary">
+            Back
+        </button>
+    </div>
+    {% endif %}
+</form>
