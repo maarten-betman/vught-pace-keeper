@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center" style="padding: 4rem 0;">
+    <h1>Track Your Marathon Training</h1>
+    <p class="text-secondary mb-1">
+        Connect with Strava to sync your workouts and follow personalized training plans.
+    </p>
+
+    {% if not user.is_authenticated %}
+        <a href="{% url 'strava_login' %}" class="btn btn-strava">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+            </svg>
+            Connect with Strava
+        </a>
+
+        <p class="mt-2 text-secondary">
+            <small>Or <a href="{% url 'account_login' %}">sign in with email</a></small>
+        </p>
+    {% else %}
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            Go to Dashboard
+        </a>
+    {% endif %}
+</div>
+
+<div style="max-width: 600px; margin: 0 auto;">
+    <h2>Features</h2>
+    <div class="card">
+        <h3>Training Plans</h3>
+        <p class="text-secondary">Follow structured marathon and half-marathon training plans tailored to your goals.</p>
+    </div>
+    <div class="card">
+        <h3>Strava Integration</h3>
+        <p class="text-secondary">Automatically sync your activities and track your progress against scheduled workouts.</p>
+    </div>
+    <div class="card">
+        <h3>Pace Zones</h3>
+        <p class="text-secondary">Define personalized pace zones and see if your workouts hit the target intensity.</p>
+    </div>
+</div>
+{% endblock %}

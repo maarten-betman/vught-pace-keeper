@@ -1,0 +1,234 @@
+[
+  {
+    "model": "training.pacezone",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "name": "recovery",
+      "min_pace_min_per_km": "6.50",
+      "max_pace_min_per_km": "7.50",
+      "description": "Very easy effort for recovery days",
+      "color_hex": "#90EE90",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.pacezone",
+    "pk": 2,
+    "fields": {
+      "user": 1,
+      "name": "easy",
+      "min_pace_min_per_km": "5.50",
+      "max_pace_min_per_km": "6.50",
+      "description": "Conversational pace for aerobic base building",
+      "color_hex": "#87CEEB",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.pacezone",
+    "pk": 3,
+    "fields": {
+      "user": 1,
+      "name": "tempo",
+      "min_pace_min_per_km": "5.00",
+      "max_pace_min_per_km": "5.30",
+      "description": "Comfortably hard, sustainable for 20-40 minutes",
+      "color_hex": "#FFA500",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.pacezone",
+    "pk": 4,
+    "fields": {
+      "user": 1,
+      "name": "threshold",
+      "min_pace_min_per_km": "4.50",
+      "max_pace_min_per_km": "5.00",
+      "description": "Lactate threshold pace",
+      "color_hex": "#FF6347",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.pacezone",
+    "pk": 5,
+    "fields": {
+      "user": 1,
+      "name": "interval",
+      "min_pace_min_per_km": "4.20",
+      "max_pace_min_per_km": "4.50",
+      "description": "Hard efforts with recovery intervals",
+      "color_hex": "#DC143C",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.trainingplan",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "name": "12-Week Half Marathon Plan",
+      "description": "Beginner-friendly half marathon training plan focusing on building aerobic base before adding speed work.",
+      "plan_type": "half_marathon",
+      "methodology": "custom",
+      "duration_weeks": 12,
+      "target_race_date": "2025-04-15",
+      "goal_time": "01:45:00",
+      "is_template": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.trainingweek",
+    "pk": 1,
+    "fields": {
+      "plan": 1,
+      "week_number": 1,
+      "focus": "base",
+      "total_distance_km": "25.00",
+      "notes": "Focus on building aerobic base. Keep all runs easy and conversational.",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.trainingweek",
+    "pk": 2,
+    "fields": {
+      "plan": 1,
+      "week_number": 2,
+      "focus": "base",
+      "total_distance_km": "28.00",
+      "notes": "Slight increase in volume. Continue easy effort.",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 1,
+    "fields": {
+      "week": 1,
+      "day_of_week": 1,
+      "workout_type": "easy",
+      "target_distance_km": "5.00",
+      "target_duration": "00:30:00",
+      "target_pace_min_per_km": "6.00",
+      "pace_zone": 2,
+      "description": "Easy Monday run to start the week",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 2,
+    "fields": {
+      "week": 1,
+      "day_of_week": 2,
+      "workout_type": "rest",
+      "target_distance_km": null,
+      "target_duration": null,
+      "target_pace_min_per_km": null,
+      "pace_zone": null,
+      "description": "Rest day - light stretching or yoga optional",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 3,
+    "fields": {
+      "week": 1,
+      "day_of_week": 3,
+      "workout_type": "easy",
+      "target_distance_km": "6.00",
+      "target_duration": "00:36:00",
+      "target_pace_min_per_km": "6.00",
+      "pace_zone": 2,
+      "description": "Mid-week easy run",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 4,
+    "fields": {
+      "week": 1,
+      "day_of_week": 4,
+      "workout_type": "rest",
+      "target_distance_km": null,
+      "target_duration": null,
+      "target_pace_min_per_km": null,
+      "pace_zone": null,
+      "description": "Rest day",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 5,
+    "fields": {
+      "week": 1,
+      "day_of_week": 5,
+      "workout_type": "easy",
+      "target_distance_km": "4.00",
+      "target_duration": "00:24:00",
+      "target_pace_min_per_km": "6.00",
+      "pace_zone": 2,
+      "description": "Short Friday run before weekend long run",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 6,
+    "fields": {
+      "week": 1,
+      "day_of_week": 6,
+      "workout_type": "rest",
+      "target_distance_km": null,
+      "target_duration": null,
+      "target_pace_min_per_km": null,
+      "pace_zone": null,
+      "description": "Rest before long run",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "training.scheduledworkout",
+    "pk": 7,
+    "fields": {
+      "week": 1,
+      "day_of_week": 7,
+      "workout_type": "long",
+      "target_distance_km": "10.00",
+      "target_duration": "01:05:00",
+      "target_pace_min_per_km": "6.50",
+      "pace_zone": 2,
+      "description": "Weekend long run - focus on time on feet, not pace",
+      "order_in_day": 1,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+]

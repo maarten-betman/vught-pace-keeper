@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: vught_pace_keeper_db
+    environment:
+      POSTGRES_DB: vught_pace_keeper
+      POSTGRES_USER: vught_user
+      POSTGRES_PASSWORD: vught_secret_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vught_user -d vught_pace_keeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: vught_pace_keeper_web
+    command: uv run python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - venv_data:/app/.venv
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - DATABASE_URL=postgis://vught_user:vught_secret_password@db:5432/vught_pace_keeper
+
+volumes:
+  postgres_data:
+  venv_data:

@@ -1,0 +1,34 @@
+[project]
+name = "vught-pace-keeper"
+version = "0.1.0"
+description = "Marathon training plan management system"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.1,<6.0",
+    "django-environ>=0.11.2",
+    "psycopg[binary]>=3.1",
+    "django-allauth[socialaccount]>=65.0",
+    "django-fernet-encrypted-fields>=0.2",
+    "django-htmx>=1.17",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "django-debug-toolbar>=4.2",
+    "pytest>=8.0",
+    "pytest-django>=4.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vught_pace_keeper"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "vught_pace_keeper.settings"
+python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["src"]

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ user.first_name|default:user.username }}!</h1>
+
+{% if strava_connected %}
+    <p class="text-secondary">
+        Your Strava account is connected (Athlete ID: {{ user.strava_athlete_id }})
+    </p>
+{% else %}
+    <div class="card" style="background: #fff8f5; border-color: #FC4C02;">
+        <p style="margin: 0;">
+            <strong>Connect your Strava account</strong> to sync your activities and track your training progress.
+        </p>
+        <a href="{% url 'strava_login' %}" class="btn btn-strava" style="margin-top: 1rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+            </svg>
+            Connect Strava
+        </a>
+    </div>
+{% endif %}
+
+<section style="margin-top: 2rem;">
+    <h2>Your Training Plans</h2>
+    {% if training_plans %}
+        {% for plan in training_plans %}
+            <div class="card">
+                <h3 style="margin-bottom: 0.5rem;">{{ plan.name }}</h3>
+                <p class="text-secondary" style="margin: 0;">
+                    {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
+                    {% if plan.target_race_date %}
+                        &bull; Race: {{ plan.target_race_date }}
+                    {% endif %}
+                </p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <p class="text-secondary" style="margin: 0;">
+                You don't have any training plans yet.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% if template_plans %}
+<section style="margin-top: 2rem;">
+    <h2>Available Templates</h2>
+    {% for plan in template_plans %}
+        <div class="card">
+            <h3 style="margin-bottom: 0.5rem;">{{ plan.name }}</h3>
+            <p class="text-secondary" style="margin: 0;">
+                {{ plan.get_plan_type_display }} &bull; {{ plan.duration_weeks }} weeks
+                {% if plan.goal_time %}
+                    &bull; Goal: {{ plan.goal_time }}
+                {% endif %}
+            </p>
+            {% if plan.description %}
+                <p style="margin-top: 0.5rem; margin-bottom: 0;">{{ plan.description }}</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</section>
+{% endif %}
+{% endblock %}
