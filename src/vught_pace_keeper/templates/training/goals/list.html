@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Goals - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Goals</h1>
+        <p class="text-gray-600 mt-1">Track your training objectives</p>
+    </div>
+    <a href="{% url 'training:goal_create' %}" class="btn btn-strava">
+        New Goal
+    </a>
+</div>
+
+{% if goals_with_progress %}
+<div class="space-y-4">
+    {% for item in goals_with_progress %}
+    {% with goal=item.goal progress=item.progress %}
+    <div class="card {% if goal.status == 'achieved' %}border-green-300 bg-green-50{% elif goal.status == 'expired' %}border-red-200 bg-red-50{% elif goal.status == 'abandoned' %}opacity-60{% endif %}">
+        <div class="flex items-start justify-between mb-3">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ goal.title }}</h3>
+                <span class="text-sm text-gray-500">
+                    {{ goal.get_goal_type_display }}
+                    {% if goal.race_distance %} - {{ goal.get_race_distance_display }}{% endif %}
+                </span>
+            </div>
+            <span class="px-2 py-1 rounded text-xs font-medium
+                {% if goal.status == 'active' %}bg-blue-100 text-blue-800
+                {% elif goal.status == 'achieved' %}bg-green-100 text-green-800
+                {% elif goal.status == 'expired' %}bg-red-100 text-red-800
+                {% elif goal.status == 'abandoned' %}bg-gray-100 text-gray-800
+                {% endif %}">
+                {{ goal.get_status_display }}
+            </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="mb-3">
+            <div class="flex items-center justify-between text-sm mb-1">
+                <span class="text-gray-600">{{ progress.status_message }}</span>
+                <span class="font-medium">{{ progress.progress_percent }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="h-2 rounded-full transition-all duration-300
+                    {% if progress.is_achieved %}bg-green-500
+                    {% elif progress.progress_percent >= 75 %}bg-blue-500
+                    {% elif progress.progress_percent >= 50 %}bg-yellow-500
+                    {% else %}bg-gray-400
+                    {% endif %}"
+                    style="width: {{ progress.progress_percent }}%">
+                </div>
+            </div>
+        </div>
+
+        <!-- Target Info -->
+        <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div>
+                <span class="text-gray-500">Target:</span>
+                {% if goal.goal_type == "race_time" %}
+                <span class="font-medium">{{ goal.formatted_target_time }}</span>
+                {% elif goal.goal_type == "weekly_km" or goal.goal_type == "monthly_km" %}
+                <span class="font-medium">{{ goal.target_distance_km }} km</span>
+                {% elif goal.goal_type == "pace" %}
+                <span class="font-medium">{{ goal.target_pace }} min/km</span>
+                {% endif %}
+            </div>
+            {% if goal.target_date %}
+            <div>
+                <span class="text-gray-500">Due:</span>
+                <span class="font-medium {% if goal.is_overdue %}text-red-600{% endif %}">
+                    {{ goal.target_date|date:"M j, Y" }}
+                    {% if goal.days_remaining is not None %}
+                    ({{ goal.days_remaining }} days)
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if progress.remaining and goal.status == "active" %}
+        <p class="text-sm text-gray-600 mb-4">
+            <span class="font-medium">Remaining:</span> {{ progress.remaining }}
+        </p>
+        {% endif %}
+
+        {% if goal.notes %}
+        <p class="text-sm text-gray-500 mb-4">{{ goal.notes }}</p>
+        {% endif %}
+
+        <!-- Actions -->
+        {% if goal.status == "active" %}
+        <div class="flex gap-3 pt-3 border-t border-gray-200">
+            <a href="{% url 'training:goal_edit' goal.pk %}"
+               class="text-sm text-gray-600 hover:text-gray-800">
+                Edit
+            </a>
+            <form method="post" action="{% url 'training:goal_abandon' goal.pk %}"
+                  onsubmit="return confirm('Abandon this goal?');">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-yellow-600 hover:text-yellow-800">
+                    Abandon
+                </button>
+            </form>
+            <form method="post" action="{% url 'training:goal_delete' goal.pk %}"
+                  onsubmit="return confirm('Delete this goal?');">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-red-600 hover:text-red-800">
+                    Delete
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="flex gap-3 pt-3 border-t border-gray-200">
+            <form method="post" action="{% url 'training:goal_delete' goal.pk %}"
+                  onsubmit="return confirm('Delete this goal?');">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-red-600 hover:text-red-800">
+                    Delete
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-12">
+    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+    </svg>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No goals yet</h3>
+    <p class="text-gray-500 mb-4">Set a goal to track your progress</p>
+    <a href="{% url 'training:goal_create' %}" class="btn btn-strava">
+        Create Your First Goal
+    </a>
+</div>
+{% endif %}
+{% endblock %}

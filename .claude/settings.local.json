@@ -6,7 +6,10 @@
       "Bash(docker-compose run:*)",
       "Bash(docker-compose exec web cat:*)",
       "Bash(uv run python:*)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(wc:*)",
+      "Bash(cat:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=vught_pace_keeper.settings uv run python:*)"
     ]
   }
 }

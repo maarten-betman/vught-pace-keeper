@@ -9,3 +9,6 @@ class TrainingConfig(AppConfig):
     def ready(self):
         # Import generators to trigger registration via @register_generator decorator
         from vught_pace_keeper.training import generators  # noqa: F401
+
+        # Import signals to register handlers
+        from vught_pace_keeper.training import signals  # noqa: F401

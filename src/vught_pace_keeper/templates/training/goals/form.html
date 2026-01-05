@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Goal - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{% url 'training:goal_list' %}" class="text-sm text-gray-500 hover:text-gray-700">
+        &larr; Back to Goals
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 mt-2">
+        {% if is_edit %}Edit Goal{% else %}Create New Goal{% endif %}
+    </h1>
+</div>
+
+<form method="post" class="max-w-lg">
+    {% csrf_token %}
+
+    <div class="card">
+        <!-- Goal Type Selection -->
+        <div class="form-group">
+            <label class="form-label">Goal Type</label>
+            <div class="grid grid-cols-2 gap-3">
+                {% for value, label in form.goal_type.field.choices %}
+                <label class="radio-card {% if form.goal_type.value == value %}selected{% endif %}">
+                    <input type="radio" name="goal_type" value="{{ value }}"
+                           class="hidden peer"
+                           {% if form.goal_type.value == value %}checked{% endif %}
+                           onchange="toggleGoalFields(this.value)">
+                    <span class="flex-1">{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.goal_type.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.goal_type.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Title -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.title.id_for_label }}">Goal Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Race Distance (for race_time and pace goals) -->
+        <div id="race-distance-field" class="form-group hidden">
+            <label class="form-label" for="{{ form.race_distance.id_for_label }}">Race Distance</label>
+            {{ form.race_distance }}
+            {% if form.race_distance.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.race_distance.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Target Time (for race_time goals) -->
+        <div id="target-time-field" class="form-group hidden">
+            <label class="form-label">Target Time</label>
+            <div class="flex items-center gap-2">
+                <div>
+                    {{ form.target_time_hours }}
+                    <span class="text-sm text-gray-500">h</span>
+                </div>
+                <span class="text-gray-400">:</span>
+                <div>
+                    {{ form.target_time_minutes }}
+                    <span class="text-sm text-gray-500">m</span>
+                </div>
+                <span class="text-gray-400">:</span>
+                <div>
+                    {{ form.target_time_seconds }}
+                    <span class="text-sm text-gray-500">s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Target Distance (for weekly/monthly km goals) -->
+        <div id="target-distance-field" class="form-group hidden">
+            <label class="form-label" for="{{ form.target_distance_km.id_for_label }}">Target Distance (km)</label>
+            {{ form.target_distance_km }}
+            {% if form.target_distance_km.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.target_distance_km.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Target Pace (for pace goals) -->
+        <div id="target-pace-field" class="form-group hidden">
+            <label class="form-label">Target Pace (per km)</label>
+            <div class="flex items-center gap-2">
+                <div>
+                    {{ form.target_pace_minutes }}
+                    <span class="text-sm text-gray-500">min</span>
+                </div>
+                <span class="text-gray-400">:</span>
+                <div>
+                    {{ form.target_pace_seconds }}
+                    <span class="text-sm text-gray-500">sec</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Target Date -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.target_date.id_for_label }}">Target Date (optional)</label>
+            {{ form.target_date }}
+            <p class="text-sm text-gray-500 mt-1">When do you want to achieve this goal?</p>
+            {% if form.target_date.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.target_date.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+            {{ form.notes }}
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="p-3 bg-red-50 text-red-700 rounded mb-4">
+            {{ form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+
+        <div class="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit" class="btn btn-strava">
+                {% if is_edit %}Save Changes{% else %}Create Goal{% endif %}
+            </button>
+            <a href="{% url 'training:goal_list' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleGoalFields(goalType) {
+    // Hide all conditional fields
+    document.getElementById('race-distance-field').classList.add('hidden');
+    document.getElementById('target-time-field').classList.add('hidden');
+    document.getElementById('target-distance-field').classList.add('hidden');
+    document.getElementById('target-pace-field').classList.add('hidden');
+
+    // Show relevant fields based on goal type
+    if (goalType === 'race_time') {
+        document.getElementById('race-distance-field').classList.remove('hidden');
+        document.getElementById('target-time-field').classList.remove('hidden');
+    } else if (goalType === 'weekly_km' || goalType === 'monthly_km') {
+        document.getElementById('target-distance-field').classList.remove('hidden');
+    } else if (goalType === 'pace') {
+        document.getElementById('race-distance-field').classList.remove('hidden');
+        document.getElementById('target-pace-field').classList.remove('hidden');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const selected = document.querySelector('input[name="goal_type"]:checked');
+    if (selected) {
+        toggleGoalFields(selected.value);
+    }
+});
+
+// Handle radio card selection styling
+document.querySelectorAll('input[name="goal_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.radio-card').forEach(function(card) {
+            card.classList.remove('selected');
+        });
+        this.closest('.radio-card').classList.add('selected');
+    });
+});
+</script>
+{% endblock %}

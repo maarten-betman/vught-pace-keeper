@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Training Load - Vught Pace Keeper{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Training Load</h1>
+        <p class="text-gray-600 mt-1">Track your fitness, fatigue, and form</p>
+    </div>
+    <a href="{% url 'training:fitness_settings' %}" class="btn btn-secondary text-sm">
+        Settings
+    </a>
+</div>
+
+<!-- Current Status Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Fitness (CTL) -->
+    <div class="card">
+        <div class="text-sm text-gray-500 mb-1">Fitness (CTL)</div>
+        <div class="text-2xl font-bold text-blue-600">{{ summary.ctl|floatformat:0 }}</div>
+        <div class="text-xs text-gray-500 mt-1">
+            {% if summary.fitness_trend == "improving" %}
+            <span class="text-green-600">Improving</span>
+            {% elif summary.fitness_trend == "declining" %}
+            <span class="text-red-600">Declining</span>
+            {% else %}
+            <span class="text-gray-600">Maintaining</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Fatigue (ATL) -->
+    <div class="card">
+        <div class="text-sm text-gray-500 mb-1">Fatigue (ATL)</div>
+        <div class="text-2xl font-bold text-orange-600">{{ summary.atl|floatformat:0 }}</div>
+        <div class="text-xs text-gray-500 mt-1">7-day load</div>
+    </div>
+
+    <!-- Form (TSB) -->
+    <div class="card">
+        <div class="text-sm text-gray-500 mb-1">Form (TSB)</div>
+        <div class="text-2xl font-bold" style="color: {{ summary.form_color }}">
+            {% if summary.tsb >= 0 %}+{% endif %}{{ summary.tsb|floatformat:0 }}
+        </div>
+        <div class="text-xs mt-1" style="color: {{ summary.form_color }}">
+            {{ summary.form_status }}
+        </div>
+    </div>
+
+    <!-- Weekly TSS -->
+    <div class="card">
+        <div class="text-sm text-gray-500 mb-1">Weekly TSS</div>
+        <div class="text-2xl font-bold text-gray-900">{{ summary.weekly_tss|floatformat:0 }}</div>
+        <div class="text-xs text-gray-500 mt-1">
+            {{ summary.weekly_progress_percent }}% of {{ summary.weekly_target }} target
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+            <div class="bg-strava h-1.5 rounded-full" style="width: {{ summary.weekly_progress_percent }}%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- PMC Chart -->
+<div class="card mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Performance Management Chart</h2>
+    <div class="relative h-80">
+        <canvas id="pmcChart"></canvas>
+    </div>
+    <div class="flex justify-center gap-6 mt-4 text-sm">
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+            <span>Fitness (CTL)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+            <span>Fatigue (ATL)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+            <span>Form (TSB)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 bg-gray-300"></span>
+            <span>Daily TSS</span>
+        </div>
+    </div>
+</div>
+
+<!-- Recent History -->
+<div class="card">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Recent History</h2>
+        <form method="post" action="{% url 'training:backfill_load' %}" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="days" value="90">
+            <button type="submit" class="text-sm text-strava hover:underline">
+                Recalculate (90 days)
+            </button>
+        </form>
+    </div>
+
+    {% if history %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-2 px-3 font-medium text-gray-700">Date</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">TSS</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">ATL</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">CTL</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">TSB</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">Form</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for load in history %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-2 px-3">{{ load.date|date:"D, M j" }}</td>
+                    <td class="py-2 px-3 text-right font-mono">{{ load.daily_tss|floatformat:0 }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-orange-600">{{ load.atl|floatformat:0 }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-blue-600">{{ load.ctl|floatformat:0 }}</td>
+                    <td class="py-2 px-3 text-right font-mono" style="color: {{ load.form_color }}">
+                        {% if load.tsb >= 0 %}+{% endif %}{{ load.tsb|floatformat:0 }}
+                    </td>
+                    <td class="py-2 px-3 text-right">
+                        <span class="px-2 py-0.5 rounded text-xs" style="background-color: {{ load.form_color }}20; color: {{ load.form_color }}">
+                            {{ load.form_status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-8 text-gray-500">
+        <p class="mb-4">No training load data yet.</p>
+        <form method="post" action="{% url 'training:backfill_load' %}">
+            {% csrf_token %}
+            <input type="hidden" name="days" value="90">
+            <button type="submit" class="btn btn-strava">
+                Calculate Training Load
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Info Section -->
+<div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+    <h3 class="font-semibold text-gray-700 mb-2">Understanding Training Load</h3>
+    <ul class="space-y-1 list-disc list-inside">
+        <li><strong>TSS (Training Stress Score)</strong>: Measures workout intensity based on your threshold pace</li>
+        <li><strong>CTL (Chronic Training Load)</strong>: Your "fitness" - 42-day rolling average of TSS</li>
+        <li><strong>ATL (Acute Training Load)</strong>: Your "fatigue" - 7-day rolling average of TSS</li>
+        <li><strong>TSB (Training Stress Balance)</strong>: Your "form" (CTL - ATL) - positive means fresh, negative means tired</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartData = {{ chart_data|safe }};
+
+const ctx = document.getElementById('pmcChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: chartData.labels.map(d => {
+            const date = new Date(d);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }),
+        datasets: [
+            {
+                label: 'Daily TSS',
+                data: chartData.tss,
+                type: 'bar',
+                backgroundColor: 'rgba(156, 163, 175, 0.5)',
+                borderColor: 'rgba(156, 163, 175, 0.8)',
+                borderWidth: 1,
+                yAxisID: 'y1',
+                order: 2,
+            },
+            {
+                label: 'Fitness (CTL)',
+                data: chartData.ctl,
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y',
+                order: 1,
+            },
+            {
+                label: 'Fatigue (ATL)',
+                data: chartData.atl,
+                borderColor: 'rgb(249, 115, 22)',
+                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y',
+                order: 1,
+            },
+            {
+                label: 'Form (TSB)',
+                data: chartData.tsb,
+                borderColor: 'rgb(34, 197, 94)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                yAxisID: 'y',
+                order: 0,
+            },
+        ],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'CTL / ATL / TSB',
+                },
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.1)',
+                },
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Daily TSS',
+                },
+                grid: {
+                    drawOnChartArea: false,
+                },
+            },
+            x: {
+                grid: {
+                    display: false,
+                },
+            },
+        },
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += Math.round(context.parsed.y);
+                        return label;
+                    }
+                }
+            }
+        },
+    },
+});
+</script>
+{% endblock %}

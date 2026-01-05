@@ -7,7 +7,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .generators import PlanGeneratorRegistry
-from .models import CompletedWorkout, PaceZone, ScheduledWorkout, TrainingPlan
+from .models import CompletedWorkout, Goal, PaceZone, PersonalRecord, ScheduledWorkout, TrainingPlan, UserFitnessSettings
 
 
 class PlanWizardStep1Form(forms.Form):
@@ -760,6 +760,369 @@ class ZoneOverrideForm(forms.ModelForm):
         instance = super().save(commit=False)
         instance.min_pace_min_per_km = self.cleaned_data["min_pace_min_per_km"]
         instance.max_pace_min_per_km = self.cleaned_data["max_pace_min_per_km"]
+
+        if commit:
+            instance.save()
+        return instance
+
+
+class FitnessSettingsForm(forms.ModelForm):
+    """Form for user fitness settings (threshold pace, HR, targets)."""
+
+    threshold_pace_minutes = forms.IntegerField(
+        min_value=2,
+        max_value=15,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "M",
+            }
+        ),
+        label="Minutes",
+    )
+    threshold_pace_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+        label="Seconds",
+    )
+
+    class Meta:
+        model = UserFitnessSettings
+        fields = [
+            "threshold_hr",
+            "target_weekly_tss",
+            "recovery_tsb_threshold",
+        ]
+        widgets = {
+            "threshold_hr": forms.NumberInput(
+                attrs={
+                    "class": "form-input",
+                    "placeholder": "e.g., 165",
+                    "min": "100",
+                    "max": "220",
+                }
+            ),
+            "target_weekly_tss": forms.NumberInput(
+                attrs={
+                    "class": "form-input",
+                    "placeholder": "e.g., 300",
+                    "min": "0",
+                    "max": "1000",
+                }
+            ),
+            "recovery_tsb_threshold": forms.NumberInput(
+                attrs={
+                    "class": "form-input",
+                    "placeholder": "e.g., -20",
+                    "min": "-100",
+                    "max": "0",
+                }
+            ),
+        }
+        help_texts = {
+            "threshold_hr": "Your lactate threshold heart rate in BPM",
+            "target_weekly_tss": "Your weekly Training Stress Score target",
+            "recovery_tsb_threshold": "TSB level below which recovery is recommended",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Pre-fill threshold pace if set
+        if self.instance and self.instance.pk and self.instance.threshold_pace:
+            pace = float(self.instance.threshold_pace)
+            self.fields["threshold_pace_minutes"].initial = int(pace)
+            self.fields["threshold_pace_seconds"].initial = int((pace % 1) * 60)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Convert threshold pace to decimal if provided
+        minutes = cleaned_data.get("threshold_pace_minutes")
+        seconds = cleaned_data.get("threshold_pace_seconds") or 0
+
+        if minutes:
+            pace_decimal = Decimal(str(minutes)) + Decimal(str(seconds)) / Decimal("60")
+            cleaned_data["threshold_pace"] = pace_decimal.quantize(Decimal("0.01"))
+        else:
+            cleaned_data["threshold_pace"] = None
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.threshold_pace = self.cleaned_data.get("threshold_pace")
+
+        if commit:
+            instance.save()
+        return instance
+
+
+class ManualRecordForm(forms.Form):
+    """Form for manually adding a personal record."""
+
+    distance = forms.ChoiceField(
+        choices=PersonalRecord.Distance.choices,
+        widget=forms.RadioSelect(attrs={"class": "hidden peer"}),
+        label="Distance",
+    )
+    custom_distance_km = forms.DecimalField(
+        required=False,
+        min_value=Decimal("0.1"),
+        max_value=Decimal("200"),
+        decimal_places=2,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input",
+                "placeholder": "Distance in km",
+                "step": "0.01",
+            }
+        ),
+        label="Custom Distance (km)",
+    )
+    time_hours = forms.IntegerField(
+        min_value=0,
+        max_value=24,
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "H",
+            }
+        ),
+    )
+    time_minutes = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=True,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "MM",
+            }
+        ),
+    )
+    time_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+    )
+    record_date = forms.DateField(
+        widget=forms.DateInput(
+            attrs={
+                "type": "date",
+                "class": "form-input",
+                "max": date.today().isoformat(),
+            }
+        ),
+        label="Date",
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        distance = cleaned_data.get("distance")
+        custom_distance = cleaned_data.get("custom_distance_km")
+
+        if distance == "custom" and not custom_distance:
+            raise ValidationError("Please enter a custom distance.")
+
+        # Combine time fields
+        hours = cleaned_data.get("time_hours") or 0
+        minutes = cleaned_data.get("time_minutes") or 0
+        seconds = cleaned_data.get("time_seconds") or 0
+
+        if not (hours or minutes or seconds):
+            raise ValidationError("Please enter a time.")
+
+        record_time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        cleaned_data["record_time"] = record_time
+
+        return cleaned_data
+
+
+class GoalForm(forms.ModelForm):
+    """Form for creating/editing a goal."""
+
+    target_time_hours = forms.IntegerField(
+        min_value=0,
+        max_value=24,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "H",
+            }
+        ),
+    )
+    target_time_minutes = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "MM",
+            }
+        ),
+    )
+    target_time_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+    )
+    target_pace_minutes = forms.IntegerField(
+        min_value=2,
+        max_value=15,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "M",
+            }
+        ),
+    )
+    target_pace_seconds = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input w-16 text-center",
+                "placeholder": "SS",
+            }
+        ),
+    )
+
+    class Meta:
+        model = Goal
+        fields = [
+            "goal_type",
+            "title",
+            "race_distance",
+            "target_distance_km",
+            "target_date",
+            "notes",
+        ]
+        widgets = {
+            "goal_type": forms.RadioSelect(attrs={"class": "hidden peer"}),
+            "title": forms.TextInput(
+                attrs={
+                    "class": "form-input",
+                    "placeholder": "e.g., Sub-4 Marathon",
+                }
+            ),
+            "race_distance": forms.Select(attrs={"class": "form-input"}),
+            "target_distance_km": forms.NumberInput(
+                attrs={
+                    "class": "form-input",
+                    "step": "0.1",
+                    "placeholder": "km",
+                }
+            ),
+            "target_date": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-input",
+                    "min": date.today().isoformat(),
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-input",
+                    "rows": 2,
+                    "placeholder": "Additional notes...",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Pre-fill time fields if editing
+        if self.instance and self.instance.pk:
+            if self.instance.target_time:
+                total_seconds = int(self.instance.target_time.total_seconds())
+                self.fields["target_time_hours"].initial = total_seconds // 3600
+                self.fields["target_time_minutes"].initial = (total_seconds % 3600) // 60
+                self.fields["target_time_seconds"].initial = total_seconds % 60
+
+            if self.instance.target_pace:
+                pace = float(self.instance.target_pace)
+                self.fields["target_pace_minutes"].initial = int(pace)
+                self.fields["target_pace_seconds"].initial = int((pace % 1) * 60)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        goal_type = cleaned_data.get("goal_type")
+
+        # Validate based on goal type
+        if goal_type == "race_time":
+            if not cleaned_data.get("race_distance"):
+                raise ValidationError("Please select a race distance.")
+
+            hours = cleaned_data.get("target_time_hours") or 0
+            minutes = cleaned_data.get("target_time_minutes") or 0
+            seconds = cleaned_data.get("target_time_seconds") or 0
+
+            if not (hours or minutes or seconds):
+                raise ValidationError("Please enter a target time.")
+
+            cleaned_data["target_time"] = timedelta(
+                hours=hours, minutes=minutes, seconds=seconds
+            )
+
+        elif goal_type in ["weekly_km", "monthly_km"]:
+            if not cleaned_data.get("target_distance_km"):
+                raise ValidationError("Please enter a target distance.")
+
+        elif goal_type == "pace":
+            if not cleaned_data.get("race_distance"):
+                raise ValidationError("Please select a race distance.")
+
+            minutes = cleaned_data.get("target_pace_minutes")
+            seconds = cleaned_data.get("target_pace_seconds") or 0
+
+            if not minutes:
+                raise ValidationError("Please enter a target pace.")
+
+            pace_decimal = Decimal(str(minutes)) + Decimal(str(seconds)) / Decimal("60")
+            cleaned_data["target_pace"] = pace_decimal.quantize(Decimal("0.01"))
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.start_date = date.today()
+
+        # Set target time if provided
+        if "target_time" in self.cleaned_data:
+            instance.target_time = self.cleaned_data["target_time"]
+
+        # Set target pace if provided
+        if "target_pace" in self.cleaned_data:
+            instance.target_pace = self.cleaned_data["target_pace"]
 
         if commit:
             instance.save()

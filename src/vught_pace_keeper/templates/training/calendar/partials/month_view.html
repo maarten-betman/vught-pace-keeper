@@ -1,0 +1,112 @@
+<!-- Month Navigation -->
+<div class="flex items-center justify-between mb-4">
+    <button
+        hx-get="{% url 'training:calendar' %}?year={{ prev_year }}&month={{ prev_month }}"
+        hx-target="#calendar-container"
+        hx-swap="innerHTML"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+    </button>
+
+    <h2 class="text-xl font-semibold text-gray-900">{{ month_name }} {{ year }}</h2>
+
+    <button
+        hx-get="{% url 'training:calendar' %}?year={{ next_year }}&month={{ next_month }}"
+        hx-target="#calendar-container"
+        hx-swap="innerHTML"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </button>
+</div>
+
+<!-- Calendar Grid -->
+<div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <!-- Weekday Headers -->
+    <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Mon</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Tue</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Wed</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Thu</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Fri</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Sat</div>
+        <div class="py-2 text-center text-sm font-medium text-gray-700">Sun</div>
+    </div>
+
+    <!-- Calendar Weeks -->
+    {% for week in weeks %}
+    <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
+        {% for day in week.days %}
+        <div
+            class="min-h-[100px] p-2 border-r border-gray-100 last:border-r-0 {% if not day.is_current_month %}bg-gray-50{% endif %} {% if day.is_today %}bg-orange-50{% endif %} {% if day.has_workouts %}cursor-pointer hover:bg-gray-50{% endif %}"
+            {% if day.has_workouts %}
+            hx-get="{% url 'training:calendar_day' day.date|date:'Y-m-d' %}"
+            hx-target="#day-modal-content"
+            hx-swap="innerHTML"
+            {% endif %}>
+
+            <!-- Day Number -->
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-sm {% if day.is_today %}font-bold text-strava{% elif not day.is_current_month %}text-gray-400{% else %}text-gray-700{% endif %}">
+                    {{ day.date.day }}
+                </span>
+
+                <!-- Status Indicator -->
+                {% if day.status != "empty" %}
+                <span class="w-2 h-2 rounded-full
+                    {% if day.status == 'completed' %}bg-green-500
+                    {% elif day.status == 'partial' %}bg-yellow-500
+                    {% elif day.status == 'missed' %}bg-red-500
+                    {% elif day.status == 'planned' %}bg-blue-500
+                    {% elif day.status == 'rest' %}bg-gray-300
+                    {% endif %}">
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Workout Indicators -->
+            {% if day.has_workouts %}
+            <div class="space-y-1">
+                {% for workout in day.scheduled_workouts|slice:":2" %}
+                <div class="text-xs px-1 py-0.5 rounded truncate" style="background-color: {{ day.zone_color|default:'#e5e7eb' }}20; border-left: 2px solid {{ day.zone_color|default:'#e5e7eb' }};">
+                    {% if workout.target_distance_km %}{{ workout.target_distance_km }}km{% endif %}
+                    {{ workout.workout_type|title }}
+                </div>
+                {% endfor %}
+
+                {% for workout in day.completed_workouts|slice:":2" %}
+                <div class="text-xs px-1 py-0.5 rounded truncate bg-green-50 border-l-2 border-green-500">
+                    {% if workout.actual_distance_km %}{{ workout.actual_distance_km }}km{% endif %}
+                </div>
+                {% endfor %}
+
+                {% if day.scheduled_workouts|length > 2 or day.completed_workouts|length > 2 %}
+                <div class="text-xs text-gray-500">+more</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Weekly Summary Row -->
+<div class="mt-4 grid grid-cols-1 gap-2">
+    {% for week in weeks %}
+    <div class="flex items-center justify-between text-sm px-4 py-2 bg-gray-50 rounded-lg">
+        <span class="text-gray-600">Week {{ week.week_number }}</span>
+        <div class="flex gap-4">
+            <span class="text-gray-700">
+                <span class="text-gray-500">Planned:</span> {{ week.total_planned_km }}km
+            </span>
+            <span class="text-gray-700">
+                <span class="text-gray-500">Actual:</span> {{ week.total_actual_km }}km
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>

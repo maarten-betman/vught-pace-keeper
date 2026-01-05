@@ -996,3 +996,327 @@ def _weeks_from_range(range_str: str) -> int:
     """Get number of weeks from range string."""
     mapping = {"4w": 4, "8w": 8, "12w": 12, "all": 52}
     return mapping.get(range_str, 12)
+
+
+# Calendar Views
+
+
+@login_required
+def training_calendar(request):
+    """Main training calendar view with month navigation."""
+    from .services.calendar import CalendarService
+
+    # Get year and month from query params, default to current
+    today = date.today()
+    year = int(request.GET.get("year", today.year))
+    month = int(request.GET.get("month", today.month))
+
+    # Validate and clamp
+    if month < 1:
+        month = 12
+        year -= 1
+    elif month > 12:
+        month = 1
+        year += 1
+
+    calendar_service = CalendarService(request.user)
+    weeks = calendar_service.get_month_data(year, month)
+
+    # Calculate prev/next month
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+
+    if month == 12:
+        next_year, next_month = year + 1, 1
+    else:
+        next_year, next_month = year, month + 1
+
+    context = {
+        "weeks": weeks,
+        "year": year,
+        "month": month,
+        "month_name": date(year, month, 1).strftime("%B"),
+        "prev_year": prev_year,
+        "prev_month": prev_month,
+        "next_year": next_year,
+        "next_month": next_month,
+        "today": today,
+    }
+
+    # Return partial for HTMX requests
+    if request.htmx:
+        return render(request, "training/calendar/partials/month_view.html", context)
+
+    return render(request, "training/calendar/calendar.html", context)
+
+
+@login_required
+@require_GET
+def calendar_day_detail(request, date_str):
+    """HTMX endpoint for day detail modal."""
+    from .services.calendar import CalendarService
+
+    try:
+        day_date = date.fromisoformat(date_str)
+    except ValueError:
+        return HttpResponse("Invalid date", status=400)
+
+    calendar_service = CalendarService(request.user)
+    day_data = calendar_service.get_day_data(day_date)
+
+    return render(
+        request,
+        "training/calendar/partials/day_popup.html",
+        {"day": day_data},
+    )
+
+
+# ============================================================================
+# Training Load Views
+# ============================================================================
+
+
+@login_required
+def training_load_dashboard(request):
+    """Dashboard showing training load metrics (TSS, ATL, CTL, TSB)."""
+    from .services.training_load import TrainingLoadService
+
+    service = TrainingLoadService(request.user)
+    summary = service.get_summary()
+    chart_data = service.get_chart_data(days=42)
+    history = service.get_load_history(days=14)
+
+    return render(
+        request,
+        "training/load/dashboard.html",
+        {
+            "summary": summary,
+            "chart_data": json.dumps(chart_data),
+            "history": history,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def fitness_settings(request):
+    """View/edit user fitness settings for training load calculations."""
+    from .forms import FitnessSettingsForm
+    from .models import UserFitnessSettings
+
+    settings_obj, _ = UserFitnessSettings.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        form = FitnessSettingsForm(request.POST, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Fitness settings saved.")
+            return redirect("training:load_dashboard")
+    else:
+        form = FitnessSettingsForm(instance=settings_obj)
+
+    return render(
+        request,
+        "training/load/settings.html",
+        {"form": form},
+    )
+
+
+@login_required
+@require_POST
+def backfill_training_load(request):
+    """Backfill training load data from historical workouts."""
+    from .services.training_load import TrainingLoadService
+
+    days = int(request.POST.get("days", 90))
+    service = TrainingLoadService(request.user)
+    count = service.backfill_historical_data(days_back=days)
+
+    messages.success(request, f"Training load calculated for {count} days.")
+    return redirect("training:load_dashboard")
+
+
+@login_required
+@require_GET
+def training_load_chart_data(request):
+    """JSON endpoint for training load chart data."""
+    from .services.training_load import TrainingLoadService
+
+    days = int(request.GET.get("days", 42))
+    service = TrainingLoadService(request.user)
+    chart_data = service.get_chart_data(days=days)
+
+    return JsonResponse(chart_data)
+
+
+# ============================================================================
+# Personal Records Views
+# ============================================================================
+
+
+@login_required
+def personal_records_list(request):
+    """Display all personal records organized by distance."""
+    from .services.records import PersonalRecordService
+
+    service = PersonalRecordService(request.user)
+    records = service.get_all_records()
+    recent = service.get_recent_records(limit=5)
+
+    return render(
+        request,
+        "training/records/list.html",
+        {
+            "records": records,
+            "recent_records": recent,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def personal_record_add(request):
+    """Add a manual personal record."""
+    from .forms import ManualRecordForm
+    from .services.records import PersonalRecordService
+
+    if request.method == "POST":
+        form = ManualRecordForm(request.POST)
+        if form.is_valid():
+            service = PersonalRecordService(request.user)
+            service.add_manual_record(
+                distance=form.cleaned_data["distance"],
+                time=form.cleaned_data["record_time"],
+                date=form.cleaned_data["record_date"],
+                custom_distance_km=form.cleaned_data.get("custom_distance_km"),
+            )
+            messages.success(request, "Personal record added.")
+            return redirect("training:records_list")
+    else:
+        form = ManualRecordForm()
+
+    return render(
+        request,
+        "training/records/add_form.html",
+        {"form": form},
+    )
+
+
+@login_required
+@require_POST
+def personal_record_delete(request, pk):
+    """Delete a personal record."""
+    from .services.records import PersonalRecordService
+
+    service = PersonalRecordService(request.user)
+    if service.delete_record(pk):
+        messages.success(request, "Record deleted.")
+    else:
+        messages.error(request, "Record not found.")
+
+    return redirect("training:records_list")
+
+
+# ============================================================================
+# Goals Views
+# ============================================================================
+
+
+@login_required
+def goal_list(request):
+    """Display all goals with progress."""
+    from .services.goals import GoalTrackingService
+
+    service = GoalTrackingService(request.user)
+    goals = service.get_all_goals()
+
+    # Calculate progress for each goal
+    goals_with_progress = []
+    for goal in goals:
+        progress = service.calculate_progress(goal)
+        goals_with_progress.append({
+            "goal": goal,
+            "progress": progress,
+        })
+
+    return render(
+        request,
+        "training/goals/list.html",
+        {"goals_with_progress": goals_with_progress},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def goal_create(request):
+    """Create a new goal."""
+    from .forms import GoalForm
+
+    if request.method == "POST":
+        form = GoalForm(request.POST)
+        if form.is_valid():
+            goal = form.save(commit=False)
+            goal.user = request.user
+            goal.save()
+            messages.success(request, "Goal created.")
+            return redirect("training:goal_list")
+    else:
+        form = GoalForm()
+
+    return render(
+        request,
+        "training/goals/form.html",
+        {"form": form, "is_edit": False},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def goal_edit(request, pk):
+    """Edit an existing goal."""
+    from .forms import GoalForm
+    from .models import Goal
+
+    goal = get_object_or_404(Goal, pk=pk, user=request.user)
+
+    if request.method == "POST":
+        form = GoalForm(request.POST, instance=goal)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Goal updated.")
+            return redirect("training:goal_list")
+    else:
+        form = GoalForm(instance=goal)
+
+    return render(
+        request,
+        "training/goals/form.html",
+        {"form": form, "goal": goal, "is_edit": True},
+    )
+
+
+@login_required
+@require_POST
+def goal_delete(request, pk):
+    """Delete a goal."""
+    from .models import Goal
+
+    goal = get_object_or_404(Goal, pk=pk, user=request.user)
+    goal.delete()
+    messages.success(request, "Goal deleted.")
+    return redirect("training:goal_list")
+
+
+@login_required
+@require_POST
+def goal_abandon(request, pk):
+    """Mark a goal as abandoned."""
+    from .models import Goal
+
+    goal = get_object_or_404(Goal, pk=pk, user=request.user)
+    goal.status = Goal.Status.ABANDONED
+    goal.save(update_fields=["status", "updated_at"])
+    messages.success(request, "Goal marked as abandoned.")
+    return redirect("training:goal_list")

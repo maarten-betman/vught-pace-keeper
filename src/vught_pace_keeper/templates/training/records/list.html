@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Personal Records - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Personal Records</h1>
+        <p class="text-gray-600 mt-1">Your best times by distance</p>
+    </div>
+    <a href="{% url 'training:record_add' %}" class="btn btn-strava">
+        Add Record
+    </a>
+</div>
+
+<!-- Records Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    {% for distance_code, record in records.items %}
+    <div class="card {% if record %}bg-gradient-to-br from-white to-orange-50{% endif %}">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-900">
+                {% if distance_code == "1k" %}1K
+                {% elif distance_code == "5k" %}5K
+                {% elif distance_code == "10k" %}10K
+                {% elif distance_code == "half" %}Half Marathon
+                {% elif distance_code == "full" %}Marathon
+                {% elif distance_code == "custom" %}Custom
+                {% endif %}
+            </h3>
+            {% if record %}
+            <span class="text-xs text-gray-500">{{ record.date|date:"M j, Y" }}</span>
+            {% endif %}
+        </div>
+
+        {% if record %}
+        <div class="text-3xl font-bold text-strava mb-2">
+            {{ record.formatted_time }}
+        </div>
+        <div class="text-sm text-gray-600 mb-3">
+            {{ record.formatted_pace }}
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-gray-500">
+            <span>
+                {% if record.is_manual %}
+                Manual entry
+                {% elif record.source_workout %}
+                From workout
+                {% endif %}
+            </span>
+            <form method="post" action="{% url 'training:record_delete' record.pk %}"
+                  onsubmit="return confirm('Delete this record?');">
+                {% csrf_token %}
+                <button type="submit" class="text-red-500 hover:text-red-700">
+                    Delete
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="text-gray-400 text-center py-6">
+            <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p>No record yet</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Records -->
+{% if recent_records %}
+<div class="card">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Records</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-2 px-3 font-medium text-gray-700">Date</th>
+                    <th class="text-left py-2 px-3 font-medium text-gray-700">Distance</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">Time</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-700">Pace</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in recent_records %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-2 px-3">{{ record.date|date:"M j, Y" }}</td>
+                    <td class="py-2 px-3">{{ record.get_distance_display }}</td>
+                    <td class="py-2 px-3 text-right font-mono font-semibold text-strava">
+                        {{ record.formatted_time }}
+                    </td>
+                    <td class="py-2 px-3 text-right text-gray-600">
+                        {{ record.formatted_pace }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Info Section -->
+<div class="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+    <h3 class="font-semibold mb-2">About Personal Records</h3>
+    <ul class="space-y-1 list-disc list-inside">
+        <li>Records are automatically detected when you log workouts within 100m of standard distances</li>
+        <li>You can also manually add records from races or other activities</li>
+        <li>Standard distances: 1K, 5K, 10K, Half Marathon (21.1km), Marathon (42.2km)</li>
+    </ul>
+</div>
+{% endblock %}

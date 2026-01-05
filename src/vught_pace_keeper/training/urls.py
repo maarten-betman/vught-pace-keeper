@@ -38,4 +38,22 @@ urlpatterns = [
         views.analytics_weekly_summary,
         name="analytics_weekly_summary",
     ),
+    # Calendar
+    path("calendar/", views.training_calendar, name="calendar"),
+    path("calendar/day/<str:date_str>/", views.calendar_day_detail, name="calendar_day"),
+    # Training Load
+    path("load/", views.training_load_dashboard, name="load_dashboard"),
+    path("load/settings/", views.fitness_settings, name="fitness_settings"),
+    path("load/backfill/", views.backfill_training_load, name="backfill_load"),
+    path("load/chart-data/", views.training_load_chart_data, name="load_chart_data"),
+    # Personal Records
+    path("records/", views.personal_records_list, name="records_list"),
+    path("records/add/", views.personal_record_add, name="record_add"),
+    path("records/<int:pk>/delete/", views.personal_record_delete, name="record_delete"),
+    # Goals
+    path("goals/", views.goal_list, name="goal_list"),
+    path("goals/create/", views.goal_create, name="goal_create"),
+    path("goals/<int:pk>/", views.goal_edit, name="goal_edit"),
+    path("goals/<int:pk>/delete/", views.goal_delete, name="goal_delete"),
+    path("goals/<int:pk>/abandon/", views.goal_abandon, name="goal_abandon"),
 ]
