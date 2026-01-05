@@ -4,78 +4,122 @@
 {% block title %}Sign In - Vught Pace Keeper{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-12">
-    <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold mb-2">Welcome Back</h1>
-        <p class="text-gray-500">Sign in to continue to your training plans</p>
-    </div>
-
-    <!-- Strava Login -->
-    <a href="{% url 'strava_login' %}" class="btn btn-strava w-full justify-center mb-6">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-        </svg>
-        Continue with Strava
-    </a>
-
-    <div class="relative my-6">
-        <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-200"></div>
-        </div>
-        <div class="relative flex justify-center text-sm">
-            <span class="px-4 bg-white text-gray-500">or sign in with email</span>
-        </div>
-    </div>
-
-    <!-- Email Login Form -->
-    <div class="card">
-        <form method="post" action="{% url 'account_login' %}">
-            {% csrf_token %}
-
-            <div class="form-group">
-                <label for="id_login" class="form-label">Email</label>
-                <input type="email" name="login" id="id_login"
-                       class="form-input" placeholder="you@example.com" required autofocus>
+<div class="-mx-4 -mt-8">
+    <div class="min-h-[calc(100vh-120px)] lg:grid lg:grid-cols-2">
+        <!-- Left Panel - Decorative (hidden on mobile) -->
+        <div class="hidden lg:flex gradient-dark relative overflow-hidden">
+            <!-- Decorative diagonal stripe -->
+            <div class="absolute inset-0 opacity-10">
+                <div class="absolute top-0 left-0 w-full h-full bg-white transform -skew-x-12 -translate-x-1/2"></div>
             </div>
 
-            <div class="form-group">
-                <label for="id_password" class="form-label">Password</label>
-                <input type="password" name="password" id="id_password"
-                       class="form-input" placeholder="Your password" required>
-            </div>
+            <div class="relative z-10 flex flex-col justify-center items-center text-center p-12 text-white">
+                <!-- Runner silhouette -->
+                <div class="mb-8 opacity-30">
+                    <svg width="200" height="200" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4 5.28c-1.23-.37-2.22-1.17-2.8-2.18l-1-1.6c-.41-.65-1.11-1-1.84-1-.78 0-1.59.5-1.78 1.44S7 23 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1 1.15 2.41 2.01 4 2.34V23H19V9.28c-.33.43-.77.77-1.27 1l-.23.5z"/>
+                    </svg>
+                </div>
 
-            <div class="flex items-center justify-between mb-6">
-                <label class="flex items-center">
-                    <input type="checkbox" name="remember" class="rounded border-gray-300 text-strava focus:ring-strava">
-                    <span class="ml-2 text-sm text-gray-600">Remember me</span>
-                </label>
-                <a href="{% url 'account_reset_password' %}" class="text-sm text-strava hover:text-strava-dark">
-                    Forgot password?
+                <h2 class="text-3xl font-bold mb-4">Welcome Back</h2>
+                <p class="text-xl text-orange-100 max-w-sm">
+                    Your training plan is waiting. Let's get you back on track.
+                </p>
+
+                <!-- Decorative pulse line -->
+                <div class="mt-12 w-full max-w-xs">
+                    <svg viewBox="0 0 200 50" class="w-full opacity-30" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M0 25 L40 25 L50 10 L60 40 L70 20 L80 30 L90 25 L200 25" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Login Form -->
+        <div class="flex items-center justify-center p-8 bg-gray-50">
+            <div class="w-full max-w-md">
+                <!-- Mobile header -->
+                <div class="lg:hidden text-center mb-8">
+                    <h1 class="text-2xl font-bold mb-2">Welcome Back</h1>
+                    <p class="text-gray-500">Sign in to continue training</p>
+                </div>
+
+                <!-- Desktop header -->
+                <div class="hidden lg:block mb-8">
+                    <h1 class="text-2xl font-bold mb-2">Sign In</h1>
+                    <p class="text-gray-500">Continue to your training plans</p>
+                </div>
+
+                <!-- Strava Login -->
+                <a href="{% url 'strava_login' %}" class="btn btn-strava w-full justify-center text-lg py-4 shadow-md hover:shadow-lg transition-shadow mb-6">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                        <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                    </svg>
+                    Continue with Strava
                 </a>
-            </div>
 
-            {% if form.errors %}
-            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                {% endfor %}
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
-            </div>
-            {% endif %}
+                <!-- Divider -->
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-4 bg-gray-50 text-gray-500">or sign in with email</span>
+                    </div>
+                </div>
 
-            <button type="submit" class="btn btn-secondary w-full justify-center">
-                Sign In
-            </button>
-        </form>
+                <!-- Email Login Form -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <form method="post" action="{% url 'account_login' %}">
+                        {% csrf_token %}
+
+                        <div class="form-group">
+                            <label for="id_login" class="form-label">Email</label>
+                            <input type="email" name="login" id="id_login"
+                                   class="form-input" placeholder="you@example.com" required autofocus>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_password" class="form-label">Password</label>
+                            <input type="password" name="password" id="id_password"
+                                   class="form-input" placeholder="Your password" required>
+                        </div>
+
+                        <div class="flex items-center justify-between mb-6">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-strava focus:ring-strava">
+                                <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                            </label>
+                            <a href="{% url 'account_reset_password' %}" class="text-sm text-strava hover:text-strava-dark font-medium">
+                                Forgot password?
+                            </a>
+                        </div>
+
+                        {% if form.errors %}
+                        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-secondary w-full justify-center py-3">
+                            Sign In
+                        </button>
+                    </form>
+                </div>
+
+                <p class="text-center text-sm text-gray-500 mt-6">
+                    Don't have an account?
+                    <a href="{% url 'account_signup' %}" class="text-strava hover:text-strava-dark font-medium">Sign up</a>
+                </p>
+            </div>
+        </div>
     </div>
-
-    <p class="text-center text-sm text-gray-500 mt-6">
-        Don't have an account?
-        <a href="{% url 'account_signup' %}" class="text-strava hover:text-strava-dark font-medium">Sign up</a>
-    </p>
 </div>
 {% endblock %}

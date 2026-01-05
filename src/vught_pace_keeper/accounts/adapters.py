@@ -14,28 +14,43 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def save_user(self, request, sociallogin, form=None):
         """
-        Called when a social account is connected.
+        Called when a social account is connected (new user).
         Store Strava-specific data on the User model.
         """
         user = super().save_user(request, sociallogin, form)
-
-        if sociallogin.account.provider == "strava":
-            extra_data = sociallogin.account.extra_data
-            user.strava_athlete_id = extra_data.get("id")
-            user.strava_profile_picture_url = extra_data.get("profile", "")
-
-            # Use first/last name from Strava if not set
-            if not user.first_name:
-                user.first_name = extra_data.get("firstname", "")
-            if not user.last_name:
-                user.last_name = extra_data.get("lastname", "")
-
-            user.save()
-
-            # Store tokens
-            self._store_strava_tokens(user, sociallogin)
-
+        self._handle_strava_connection(user, sociallogin)
         return user
+
+    def pre_social_login(self, request, sociallogin):
+        """
+        Called after authentication but before login.
+        Handle existing users connecting Strava.
+        """
+        super().pre_social_login(request, sociallogin)
+
+        # If user exists and is connecting Strava, store the data
+        if sociallogin.is_existing and sociallogin.account.provider == "strava":
+            self._handle_strava_connection(sociallogin.user, sociallogin)
+
+    def _handle_strava_connection(self, user, sociallogin):
+        """Store Strava data and tokens for a user."""
+        if sociallogin.account.provider != "strava":
+            return
+
+        extra_data = sociallogin.account.extra_data
+        user.strava_athlete_id = extra_data.get("id")
+        user.strava_profile_picture_url = extra_data.get("profile", "")
+
+        # Use first/last name from Strava if not set
+        if not user.first_name:
+            user.first_name = extra_data.get("firstname", "")
+        if not user.last_name:
+            user.last_name = extra_data.get("lastname", "")
+
+        user.save()
+
+        # Store tokens
+        self._store_strava_tokens(user, sociallogin)
 
     def _store_strava_tokens(self, user, sociallogin):
         """Store Strava OAuth tokens for the user."""

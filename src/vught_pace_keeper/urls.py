@@ -9,5 +9,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),  # Allauth URLs (login, logout, etc.)
     path("training/", include("vught_pace_keeper.training.urls")),  # Training plans
+    path("strava/", include("vught_pace_keeper.strava_integration.urls")),  # Strava sync
     path("", include("vught_pace_keeper.accounts.urls")),  # Landing page, dashboard
 ]

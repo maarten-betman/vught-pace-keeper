@@ -36,6 +36,11 @@ class User(AbstractUser):
         blank=True,
         help_text="Strava profile picture URL",
     )
+    last_strava_sync = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time Strava activities were synced",
+    )
 
     class Meta:
         verbose_name = "user"

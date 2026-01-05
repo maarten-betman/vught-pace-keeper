@@ -13,6 +13,7 @@ dependencies = [
     "django-htmx>=1.17",
     "requests>=2.31",
     "gpxpy>=1.6.2",
+    "polyline>=2.0.0",
 ]
 
 [project.optional-dependencies]

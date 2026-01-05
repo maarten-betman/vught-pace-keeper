@@ -7,11 +7,211 @@
 {% if route_geojson %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+    body { max-width: none !important; padding: 0 !important; }
+    nav { max-width: 960px; margin: 0 auto; padding: 0 1rem; }
+    main { max-width: none; }
+</style>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+{% if route_geojson %}
+<!-- Full-width layout with map and sidebar -->
+<div class="flex flex-col lg:flex-row h-[calc(100vh-80px)]">
+    <!-- Map Section (main area) -->
+    <div class="flex-1 relative order-2 lg:order-1">
+        <div id="map" class="absolute inset-0"></div>
+
+        <!-- Back button overlay -->
+        <a href="{% url 'training:workout_log_list' %}"
+           class="absolute top-4 left-4 z-[1000] bg-white px-3 py-2 rounded-lg shadow-lg text-sm text-gray-600 hover:text-strava flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back
+        </a>
+    </div>
+
+    <!-- Stats Sidebar -->
+    <div class="w-full lg:w-96 bg-white border-b lg:border-b-0 lg:border-l border-gray-200 overflow-y-auto order-1 lg:order-2">
+        <div class="p-6">
+            <!-- Header -->
+            <div class="mb-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-xl font-bold">{{ workout.date|date:"l, F j, Y" }}</h1>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="px-2 py-0.5 rounded text-xs {{ workout.source|source_badge_class }}">
+                                {{ workout.get_source_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'training:workout_log_delete' pk=workout.pk %}"
+                          onsubmit="return confirm('Are you sure you want to delete this workout?');">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-500 hover:text-red-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+                {% if workout.scheduled_workout %}
+                <p class="text-sm text-gray-500 mt-2">
+                    Linked to {{ workout.scheduled_workout.week.plan.name }}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Primary Stats -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-strava">{{ workout.actual_distance_km|floatformat:2 }}</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">km</div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{ workout.actual_duration|format_duration }}</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">Duration</div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{ workout.average_pace_min_per_km|format_pace }}</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">Avg Pace</div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 text-center">
+                    {% if workout.perceived_effort %}
+                    <div class="text-2xl font-bold {{ workout.perceived_effort|effort_color }}">{{ workout.perceived_effort }}/10</div>
+                    {% else %}
+                    <div class="text-2xl font-bold text-gray-300">-</div>
+                    {% endif %}
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">RPE</div>
+                </div>
+            </div>
+
+            <!-- Training Zone -->
+            {% pace_in_zone workout.average_pace_min_per_km request.user as zone_name %}
+            {% if zone_name %}
+            <div class="mb-6 text-center">
+                <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">Training Zone</div>
+                <span class="px-4 py-2 rounded-full text-sm font-medium {{ zone_name|zone_color }}">
+                    {{ zone_name|title }}
+                </span>
+            </div>
+            {% endif %}
+
+            <!-- Additional Details -->
+            {% if workout.elevation_gain_m or workout.average_heart_rate %}
+            <div class="border-t border-gray-100 pt-4 mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    {% if workout.elevation_gain_m %}
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Elevation</div>
+                        <div class="font-medium">{{ workout.elevation_gain_m|format_elevation }}</div>
+                    </div>
+                    {% endif %}
+                    {% if workout.average_heart_rate %}
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Avg HR</div>
+                        <div class="font-medium">{{ workout.average_heart_rate }} bpm</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if workout.notes %}
+            <div class="border-t border-gray-100 pt-4 mb-4">
+                <div class="text-xs text-gray-500 uppercase mb-2">Notes</div>
+                <p class="text-sm text-gray-700">{{ workout.notes }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Planned vs Actual -->
+            {% if workout.scheduled_workout %}
+            <div class="border-t border-gray-100 pt-4">
+                <div class="text-xs text-gray-500 uppercase mb-3">Planned vs Actual</div>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-gray-500">
+                            <th class="text-left py-1"></th>
+                            <th class="text-right py-1">Plan</th>
+                            <th class="text-right py-1">Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if workout.scheduled_workout.target_distance_km %}
+                        <tr>
+                            <td class="py-1">Distance</td>
+                            <td class="text-right py-1 text-gray-500">{{ workout.scheduled_workout.target_distance_km }} km</td>
+                            <td class="text-right py-1 font-medium">{{ workout.actual_distance_km }} km</td>
+                        </tr>
+                        {% endif %}
+                        {% if workout.scheduled_workout.target_pace_min_per_km %}
+                        <tr>
+                            <td class="py-1">Pace</td>
+                            <td class="text-right py-1 text-gray-500">{{ workout.scheduled_workout.target_pace_min_per_km|format_pace }}</td>
+                            <td class="text-right py-1 font-medium">{{ workout.average_pace_min_per_km|format_pace }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const map = L.map('map', {
+            zoomControl: false
+        });
+
+        // Add zoom control to bottom-right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        const routeData = {{ route_geojson|safe }};
+        const routeLayer = L.geoJSON(routeData, {
+            style: {
+                color: '#FC4C02',
+                weight: 5,
+                opacity: 0.9
+            }
+        }).addTo(map);
+
+        // Fit map to route bounds
+        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+
+        // Add start/end markers
+        const coords = routeData.geometry.coordinates;
+        if (coords.length > 0) {
+            L.circleMarker([coords[0][1], coords[0][0]], {
+                radius: 10,
+                fillColor: '#22c55e',
+                color: '#fff',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(map).bindTooltip('Start', { permanent: false });
+
+            L.circleMarker([coords[coords.length-1][1], coords[coords.length-1][0]], {
+                radius: 10,
+                fillColor: '#ef4444',
+                color: '#fff',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(map).bindTooltip('Finish', { permanent: false });
+        }
+    });
+</script>
+
+{% else %}
+<!-- Fallback layout when no route data -->
+<div class="max-w-2xl mx-auto px-4">
     <!-- Header -->
     <div class="mb-6">
         <a href="{% url 'training:workout_log_list' %}" class="text-sm text-gray-500 hover:text-strava mb-2 inline-block">
@@ -151,54 +351,14 @@
     </div>
     {% endif %}
 
-    <!-- Map -->
-    {% if route_geojson %}
-    <div class="card mb-6">
-        <h2 class="font-semibold mb-4">Route</h2>
-        <div id="map" class="h-80 rounded-lg"></div>
+    <!-- No Route Message -->
+    <div class="card text-center text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+        </svg>
+        <p>No route data available for this workout.</p>
+        <p class="text-sm mt-1">Upload a GPX file to see your route.</p>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const map = L.map('map');
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            const routeData = {{ route_geojson|safe }};
-            const routeLayer = L.geoJSON(routeData, {
-                style: {
-                    color: '#FC4C02',
-                    weight: 4,
-                    opacity: 0.8
-                }
-            }).addTo(map);
-
-            // Fit map to route bounds
-            map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
-
-            // Add start/end markers
-            const coords = routeData.geometry.coordinates;
-            if (coords.length > 0) {
-                L.circleMarker([coords[0][1], coords[0][0]], {
-                    radius: 8,
-                    fillColor: '#22c55e',
-                    color: '#fff',
-                    weight: 2,
-                    fillOpacity: 1
-                }).addTo(map).bindTooltip('Start');
-
-                L.circleMarker([coords[coords.length-1][1], coords[coords.length-1][0]], {
-                    radius: 8,
-                    fillColor: '#ef4444',
-                    color: '#fff',
-                    weight: 2,
-                    fillOpacity: 1
-                }).addTo(map).bindTooltip('End');
-            }
-        });
-    </script>
-    {% endif %}
 </div>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Connect with {{ provider.name }} - Vught Pace Keeper{% endblock %}
+
+{% block content %}
+<div class="-mx-4 -mt-8">
+    <div class="min-h-[calc(100vh-120px)] flex items-center justify-center gradient-hero">
+        <div class="w-full max-w-md p-8">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 text-center">
+                <!-- Strava Logo -->
+                <div class="w-20 h-20 bg-strava rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                    </svg>
+                </div>
+
+                {% if process == "connect" %}
+                <h1 class="text-2xl font-bold mb-3">Connect {{ provider.name }}</h1>
+                <p class="text-gray-500 mb-6">
+                    You're about to connect your {{ provider.name }} account to Vught Pace Keeper.
+                </p>
+                {% else %}
+                <h1 class="text-2xl font-bold mb-3">Sign In with {{ provider.name }}</h1>
+                <p class="text-gray-500 mb-6">
+                    You'll be redirected to {{ provider.name }} to authorize access to your activities.
+                </p>
+                {% endif %}
+
+                <!-- Permissions info -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                    <p class="text-sm font-medium text-gray-700 mb-2">We'll access:</p>
+                    <ul class="text-sm text-gray-500 space-y-1">
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Your profile information
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Your running activities
+                        </li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-strava w-full justify-center text-lg py-4 shadow-md hover:shadow-lg transition-all">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" class="mr-2">
+                            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                        </svg>
+                        Continue to {{ provider.name }}
+                    </button>
+                </form>
+
+                <p class="mt-6 text-xs text-gray-400">
+                    By continuing, you agree to let Vught Pace Keeper access your {{ provider.name }} data.
+                </p>
+            </div>
+
+            <p class="text-center mt-6">
+                <a href="{% url 'account_login' %}" class="text-white/80 hover:text-white text-sm">
+                    &larr; Back to sign in options
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
