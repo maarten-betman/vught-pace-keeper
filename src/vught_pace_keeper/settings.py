@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Serve static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -207,3 +208,97 @@ if STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET:
             "secret": STRAVA_CLIENT_SECRET,
         }
     ]
+
+
+# =============================================================================
+# WhiteNoise Configuration (Static Files)
+# =============================================================================
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+
+# =============================================================================
+# CSRF Trusted Origins (for Digital Ocean)
+# =============================================================================
+
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+
+# =============================================================================
+# Production Settings (when DEBUG=False)
+# =============================================================================
+
+if not DEBUG:
+    # Database connection pooling
+    DATABASES["default"]["ENGINE"] = "dj_db_conn_pool.backends.postgresql"
+    DATABASES["default"]["POOL_OPTIONS"] = {
+        "POOL_SIZE": env.int("DB_POOL_SIZE", default=10),
+        "MAX_OVERFLOW": env.int("DB_MAX_OVERFLOW", default=10),
+        "RECYCLE": env.int("DB_POOL_RECYCLE", default=300),
+    }
+
+    # HTTPS settings
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    # Session security
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # HSTS
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Content security
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": env.str("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+        "vught_pace_keeper": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+    },
+}

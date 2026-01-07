@@ -6,6 +6,8 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    # Health checks (no auth required, accessed by load balancer)
+    path("", include("vught_pace_keeper.core.urls")),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),  # Allauth URLs (login, logout, etc.)
     path("training/", include("vught_pace_keeper.training.urls")),  # Training plans

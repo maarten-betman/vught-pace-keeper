@@ -14,6 +14,10 @@ dependencies = [
     "requests>=2.31",
     "gpxpy>=1.6.2",
     "polyline>=2.0.0",
+    # Production dependencies
+    "gunicorn>=23.0",
+    "whitenoise>=6.8",
+    "django-db-connection-pool[postgresql]>=1.2",
 ]
 
 [project.optional-dependencies]
