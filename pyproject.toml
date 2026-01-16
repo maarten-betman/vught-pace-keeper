@@ -17,7 +17,6 @@ dependencies = [
     # Production dependencies
     "gunicorn>=23.0",
     "whitenoise>=6.8",
-    "django-db-connection-pool[postgresql]>=1.2",
 ]
 
 [project.optional-dependencies]

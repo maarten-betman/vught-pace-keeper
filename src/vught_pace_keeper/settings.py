@@ -236,13 +236,9 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 # =============================================================================
 
 if not DEBUG:
-    # Database connection pooling
-    DATABASES["default"]["ENGINE"] = "dj_db_conn_pool.backends.postgresql"
-    DATABASES["default"]["POOL_OPTIONS"] = {
-        "POOL_SIZE": env.int("DB_POOL_SIZE", default=10),
-        "MAX_OVERFLOW": env.int("DB_MAX_OVERFLOW", default=10),
-        "RECYCLE": env.int("DB_POOL_RECYCLE", default=300),
-    }
+    # Note: django-db-connection-pool doesn't support PostGIS backend
+    # For production connection pooling, use PgBouncer or similar at the database level
+    # Digital Ocean Managed Databases include built-in connection pooling
 
     # HTTPS settings
     SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)

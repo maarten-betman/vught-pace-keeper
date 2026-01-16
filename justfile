@@ -108,9 +108,9 @@ fmt:
 
 # --- Tailwind CSS ---
 
-# Download Tailwind standalone CLI (run once)
+# Download Tailwind standalone CLI v3.x (run once)
 tw-install:
-    curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+    curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64
     chmod +x tailwindcss-linux-x64
     mv tailwindcss-linux-x64 tailwindcss
 
@@ -136,3 +136,42 @@ fresh: db migrate fixtures run
 
 # Quick start: just db and run (assumes migrations are applied)
 start: db run
+
+# --- Production Docker ---
+
+# Build production Docker image
+prod-build:
+    docker build -t vught-pace-keeper:prod .
+
+# Start production stack (PostGIS + app)
+prod-up:
+    docker-compose -f docker-compose.prod.yml up -d
+
+# Start production stack with rebuild
+prod-up-build:
+    docker-compose -f docker-compose.prod.yml up -d --build
+
+# Stop production stack
+prod-down:
+    docker-compose -f docker-compose.prod.yml down
+
+# View production logs
+prod-logs:
+    docker-compose -f docker-compose.prod.yml logs -f
+
+# View production web logs only
+prod-logs-web:
+    docker-compose -f docker-compose.prod.yml logs -f web
+
+# Check production health
+prod-health:
+    curl -s http://localhost:8080/health/ | python -m json.tool
+
+# Shell into production container
+prod-shell:
+    docker-compose -f docker-compose.prod.yml exec web /bin/bash
+
+# Reset production database (destructive!)
+prod-reset:
+    docker-compose -f docker-compose.prod.yml down -v
+    docker-compose -f docker-compose.prod.yml up -d

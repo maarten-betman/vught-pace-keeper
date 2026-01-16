@@ -22,11 +22,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY pyproject.toml uv.lock ./
 
 # Create virtual environment and install production dependencies only
+# --no-install-project skips installing the local package (we copy source directly)
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN uv venv /opt/venv && \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --no-install-project
 
-# Download and setup Tailwind CLI
-RUN curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 \
+# Download and setup Tailwind CLI v3.x (project uses v3 syntax)
+RUN curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64 \
     -o /usr/local/bin/tailwindcss && \
     chmod +x /usr/local/bin/tailwindcss
 
@@ -48,12 +50,9 @@ LABEL org.opencontainers.image.title="Vught Pace Keeper"
 LABEL org.opencontainers.image.description="Marathon training plan management with Strava integration"
 
 # Install runtime dependencies only (no build tools)
-# Using package names from Debian Bookworm (python:3.13-slim base)
+# gdal-bin pulls in the required shared libraries automatically
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gdal-bin \
-    libgdal32 \
-    libgeos-c1v5 \
-    libproj25 \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -91,7 +90,7 @@ RUN SECRET_KEY=build-time-secret \
     DATABASE_URL=sqlite:///dummy.db \
     DEBUG=False \
     ALLOWED_HOSTS=localhost \
-    python manage.py collectstatic --noinput
+    /opt/venv/bin/python manage.py collectstatic --noinput
 
 # Create directories and set permissions
 RUN mkdir -p /app/staticfiles /app/media && \

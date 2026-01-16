@@ -92,9 +92,29 @@ class ActivitySyncService:
         return result
 
     def _get_sync_start_time(self) -> datetime:
-        """Get the start time for syncing activities."""
-        if self.user.last_strava_sync:
-            return self.user.last_strava_sync
+        """Get the start time for syncing activities.
+
+        Uses the date of the latest Strava-synced workout rather than
+        the sync timestamp, to catch late-uploaded activities.
+        """
+        # Find the most recent Strava-synced workout
+        latest_workout = (
+            CompletedWorkout.objects.filter(
+                user=self.user,
+                source=CompletedWorkout.Source.STRAVA,
+            )
+            .order_by("-date")
+            .first()
+        )
+
+        if latest_workout:
+            # Start from the beginning of that workout's date (midnight)
+            # to ensure we don't miss same-day activities
+            return timezone.make_aware(
+                datetime.combine(latest_workout.date, datetime.min.time())
+            )
+
+        # First sync: look back DEFAULT_LOOKBACK_DAYS
         return timezone.now() - timedelta(days=self.DEFAULT_LOOKBACK_DAYS)
 
     def _already_imported(self, strava_id: int) -> bool:
