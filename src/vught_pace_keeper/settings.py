@@ -91,7 +91,7 @@ WSGI_APPLICATION = "vught_pace_keeper.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-# PostGIS via django-environ: postgis:// schema maps to django.contrib.gis.db.backends.postgis
+# Always use PostGIS backend for GeoDjango support
 
 DATABASES = {
     "default": env.db(
@@ -100,11 +100,13 @@ DATABASES = {
     ),
 }
 
+# Force PostGIS backend (in case DATABASE_URL uses postgres:// instead of postgis://)
+DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
+
 # Require SSL for production database connections
 if not DEBUG:
-    DATABASES["default"]["OPTIONS"] = {
-        "sslmode": "require",
-    }
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"]["sslmode"] = "require"
 
 
 # Custom User Model
