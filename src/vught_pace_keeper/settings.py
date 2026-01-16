@@ -100,6 +100,12 @@ DATABASES = {
     ),
 }
 
+# Require SSL for production database connections
+if not DEBUG:
+    DATABASES["default"]["OPTIONS"] = {
+        "sslmode": "require",
+    }
+
 
 # Custom User Model
 AUTH_USER_MODEL = "accounts.User"
