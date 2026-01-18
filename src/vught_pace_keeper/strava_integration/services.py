@@ -74,7 +74,10 @@ class ActivitySyncService:
                 continue
 
             try:
-                workout = self._create_completed_workout(activity)
+                # Fetch detailed activity to get device_name (required for Garmin attribution)
+                device_name = self._fetch_device_name(activity.id)
+
+                workout = self._create_completed_workout(activity, device_name)
                 result.imported += 1
 
                 # Fetch and store activity streams (pace, HR, etc.)
@@ -121,12 +124,28 @@ class ActivitySyncService:
         """Check if activity has already been imported."""
         return CompletedWorkout.objects.filter(strava_activity_id=strava_id).exists()
 
-    def _create_completed_workout(self, activity: StravaActivity) -> CompletedWorkout:
+    def _fetch_device_name(self, activity_id: int) -> str | None:
+        """
+        Fetch device_name from detailed activity endpoint.
+
+        Required for Garmin attribution compliance (Nov 2025).
+        The device_name is only available in DetailedActivity, not SummaryActivity.
+        """
+        try:
+            detail = self.client.get_activity_detail(activity_id)
+            return detail.get("device_name")
+        except Exception:
+            return None
+
+    def _create_completed_workout(
+        self, activity: StravaActivity, device_name: str | None = None
+    ) -> CompletedWorkout:
         """
         Create a CompletedWorkout from a Strava activity.
 
         Args:
             activity: StravaActivity instance
+            device_name: Recording device name (for Garmin attribution)
 
         Returns:
             Created CompletedWorkout instance
@@ -148,6 +167,7 @@ class ActivitySyncService:
             route=self._decode_polyline(activity.map_polyline),
             source=CompletedWorkout.Source.STRAVA,
             strava_activity_id=activity.id,
+            device_name=device_name or "",
             notes=activity.name,
         )
 

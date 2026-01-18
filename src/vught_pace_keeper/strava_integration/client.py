@@ -27,6 +27,7 @@ class StravaActivity:
     average_heartrate: float | None
     max_heartrate: float | None
     map_polyline: str | None  # encoded polyline
+    device_name: str | None  # Recording device (e.g., "Garmin Forerunner 265")
 
     @classmethod
     def from_api_response(cls, data: dict) -> "StravaActivity":
@@ -43,6 +44,7 @@ class StravaActivity:
             average_heartrate=data.get("average_heartrate"),
             max_heartrate=data.get("max_heartrate"),
             map_polyline=data.get("map", {}).get("summary_polyline"),
+            device_name=data.get("device_name"),
         )
 
 
