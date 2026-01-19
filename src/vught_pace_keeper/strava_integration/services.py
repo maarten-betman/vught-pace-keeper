@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import polyline
+from django.conf import settings
 from django.contrib.gis.geos import LineString
 from django.utils import timezone
 
@@ -33,9 +34,6 @@ class SyncResult:
 
 class ActivitySyncService:
     """Service for syncing Strava activities to CompletedWorkout records."""
-
-    # Default lookback period for first sync
-    DEFAULT_LOOKBACK_DAYS = 365
 
     def __init__(self, user: "User"):
         """
@@ -114,8 +112,8 @@ class ActivitySyncService:
                 datetime.combine(latest_workout.date, datetime.min.time())
             )
 
-        # First sync: look back DEFAULT_LOOKBACK_DAYS
-        return timezone.now() - timedelta(days=self.DEFAULT_LOOKBACK_DAYS)
+        # First sync: look back configured days (default 365)
+        return timezone.now() - timedelta(days=settings.STRAVA_SYNC_LOOKBACK_DAYS)
 
     def _already_imported(self, strava_id: int) -> bool:
         """Check if activity has already been imported."""

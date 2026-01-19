@@ -201,6 +201,7 @@ SALT_KEY = env("SALT_KEY", default=SECRET_KEY[:16])
 # Strava provider configuration
 STRAVA_CLIENT_ID = env("STRAVA_CLIENT_ID", default="")
 STRAVA_CLIENT_SECRET = env("STRAVA_CLIENT_SECRET", default="")
+STRAVA_SYNC_LOOKBACK_DAYS = env.int("STRAVA_SYNC_LOOKBACK_DAYS", default=365)
 
 SOCIALACCOUNT_PROVIDERS = {
     "strava": {
