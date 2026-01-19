@@ -35,6 +35,7 @@ services:
       - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
       - FERNET_KEY=${FERNET_KEY:-}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-}
+      - PGSSLMODE=disable
     expose:
       - "8080"
     healthcheck:
