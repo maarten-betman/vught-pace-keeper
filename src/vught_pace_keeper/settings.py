@@ -103,10 +103,11 @@ DATABASES = {
 # Force PostGIS backend (in case DATABASE_URL uses postgres:// instead of postgis://)
 DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 
-# Require SSL for production database connections
-if not DEBUG:
+# SSL mode for database connections (default: require in production, disable in debug)
+DATABASE_SSL_MODE = env.str("DATABASE_SSL_MODE", default="require" if not DEBUG else "disable")
+if DATABASE_SSL_MODE:
     DATABASES["default"].setdefault("OPTIONS", {})
-    DATABASES["default"]["OPTIONS"]["sslmode"] = "require"
+    DATABASES["default"]["OPTIONS"]["sslmode"] = DATABASE_SSL_MODE
 
 
 # Custom User Model
