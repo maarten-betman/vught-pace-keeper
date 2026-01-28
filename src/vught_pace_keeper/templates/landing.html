@@ -23,12 +23,7 @@
 
                 {% if not user.is_authenticated %}
                 <div class="flex flex-wrap gap-4">
-                    <a href="{% url 'strava_login' %}" class="btn btn-strava text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-shadow">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-                        </svg>
-                        Connect with Strava
-                    </a>
+                    {% include "components/connect_with_strava.html" with size="large" %}
                     <a href="#features" class="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8 py-4 backdrop-blur">
                         Learn More
                     </a>
@@ -165,17 +160,22 @@
             <p class="text-orange-100 mb-6 max-w-md mx-auto">
                 Join runners who are training smarter with personalized plans and Strava integration.
             </p>
-            <a href="{% url 'strava_login' %}" class="btn bg-white text-strava hover:bg-gray-100 text-lg px-8 py-4 shadow-lg">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-                </svg>
-                Connect with Strava
-            </a>
+            {% include "components/connect_with_strava.html" with variant="light" size="large" %}
             <p class="mt-4 text-orange-200 text-sm">
                 Or <a href="{% url 'account_login' %}" class="text-white underline hover:no-underline">sign in with email</a>
             </p>
         </div>
     </div>
 </section>
+
+<!-- Footer with Strava Attribution (API Compliance) -->
+<footer class="py-6 px-4 text-center">
+    <div class="flex flex-col items-center gap-4 text-sm text-gray-500">
+        {% include "components/strava_attribution.html" %}
+        <div>
+            &copy; {% now "Y" %} Vught Pace Keeper
+        </div>
+    </div>
+</footer>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,40 @@
+{% comment %}
+Official "Connect with Strava" Button Component
+
+Per Strava Brand Guidelines (https://developers.strava.com/guidelines/):
+- All apps using the Connect with Strava button for OAuth must link to proper OAuth URLs
+- Button comes in 2 color options: orange and white
+- Button height should be 48px @1x, 96px @2x
+- No modifications to the official button design
+
+Usage:
+  {% include "components/connect_with_strava.html" %}
+  {% include "components/connect_with_strava.html" with variant="light" %}
+  {% include "components/connect_with_strava.html" with size="large" %}
+{% endcomment %}
+
+{% with variant=variant|default:"orange" size=size|default:"medium" %}
+<a href="{% url 'strava_login' %}"
+   class="inline-flex items-center justify-center gap-2 font-semibold rounded transition-all duration-200 no-underline
+          {% if variant == 'light' %}
+          bg-white text-strava hover:bg-gray-100 border border-gray-200
+          {% else %}
+          bg-[#FC4C02] text-white hover:bg-[#E34402]
+          {% endif %}
+          {% if size == 'large' %}
+          px-8 py-4 text-lg
+          {% elif size == 'small' %}
+          px-4 py-2 text-sm
+          {% else %}
+          px-6 py-3 text-base
+          {% endif %}">
+    <!-- Official Strava logo mark -->
+    <svg class="{% if size == 'large' %}w-6 h-6{% elif size == 'small' %}w-4 h-4{% else %}w-5 h-5{% endif %}"
+         viewBox="0 0 24 24"
+         fill="{% if variant == 'light' %}#FC4C02{% else %}white{% endif %}"
+         aria-hidden="true">
+        <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+    </svg>
+    <span>Connect with Strava</span>
+</a>
+{% endwith %}

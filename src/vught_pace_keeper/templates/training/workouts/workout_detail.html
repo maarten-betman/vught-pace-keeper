@@ -42,10 +42,13 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <h1 class="text-xl font-bold">{{ workout.date|date:"l, F j, Y" }}</h1>
-                        <div class="flex items-center gap-2 mt-1">
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
                             <span class="px-2 py-0.5 rounded text-xs {{ workout.source|source_badge_class }}">
                                 {{ workout.get_source_display }}
                             </span>
+                            {% if workout.is_garmin_device %}
+                            {% include "components/garmin_attribution.html" with device_name=workout.device_name %}
+                            {% endif %}
                         </div>
                     </div>
                     <form method="post" action="{% url 'training:workout_log_delete' pk=workout.pk %}"
@@ -486,10 +489,13 @@
         <div class="flex justify-between items-start">
             <div>
                 <h1 class="text-2xl font-bold">{{ workout.date|date:"l, F j, Y" }}</h1>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span class="px-2 py-0.5 rounded text-xs {{ workout.source|source_badge_class }}">
                         {{ workout.get_source_display }}
                     </span>
+                    {% if workout.is_garmin_device %}
+                    {% include "components/garmin_attribution.html" with device_name=workout.device_name %}
+                    {% endif %}
                     {% if workout.scheduled_workout %}
                     <span class="text-sm text-gray-500">
                         Linked to {{ workout.scheduled_workout.week.plan.name }}

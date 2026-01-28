@@ -299,6 +299,11 @@ class CompletedWorkout(TimestampedModel):
         unique=True,
         help_text="Strava activity ID for deduplication",
     )
+    device_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Recording device name (e.g., 'Garmin Forerunner 265')",
+    )
     perceived_effort = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
@@ -317,6 +322,13 @@ class CompletedWorkout(TimestampedModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.date} - {self.actual_distance_km}km"
+
+    @property
+    def is_garmin_device(self) -> bool:
+        """Check if activity was recorded with a Garmin device."""
+        if not self.device_name:
+            return False
+        return "garmin" in self.device_name.lower()
 
 
 class ActivityStream(models.Model):
